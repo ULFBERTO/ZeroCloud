@@ -1,0 +1,188 @@
+<div class="min-h-screen bg-gray-900 text-white p-6">
+  <div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8">
+      <div>
+        <h1 class="text-3xl font-bold">🧠 Gestión de Modelos</h1>
+        <p class="text-gray-400 mt-1">Administra los modelos de IA locales</p>
+      </div>
+      <button
+        (click)="startChat()"
+        class="px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl font-medium transition-colors">
+        💬 Ir al Chat
+      </button>
+    </div>
+
+    <!-- Storage Info -->
+    @if (storageInfo()) {
+      <div class="bg-gray-800 rounded-xl p-4 mb-6">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm text-gray-400">Almacenamiento usado</span>
+          <span class="text-sm">{{ storageInfo()!.used }} / {{ storageInfo()!.quota }}</span>
+        </div>
+        <div class="w-full bg-gray-700 rounded-full h-2">
+          <div
+            class="bg-blue-500 h-full rounded-full transition-all"
+            [style.width.%]="storageInfo()!.percent">
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Actions -->
+    <div class="flex gap-3 mb-6">
+      <button
+        (click)="openRegistryModal()"
+        class="px-4 py-2 bg-green-600 hover:bg-green-500 rounded-lg transition-colors">
+        📦 Explorar Registro MLC
+      </button>
+      <button
+        (click)="openAddModal()"
+        class="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg transition-colors">
+        ➕ Agregar por ID
+      </button>
+      <button
+        (click)="refreshModels()"
+        [disabled]="isChecking()"
+        class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50">
+        🔄 Actualizar
+      </button>
+    </div>
+
+    <!-- Models Grid -->
+    <div class="grid gap-4">
+      @if (isChecking()) {
+        <div class="text-center py-8 text-gray-400">
+          <div class="animate-spin inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mb-2"></div>
+          <p>Verificando modelos...</p>
+        </div>
+      }
+
+      @for (model of models(); track model.id) {
+        <div
+          class="bg-gray-800 rounded-xl p-4 border-2 transition-all cursor-pointer"
+          [class.border-blue-500]="selectedModelId() === model.id"
+          [class.border-transparent]="selectedModelId() !== model.id"
+          (click)="selectModel(model.id)">
+          <div class="flex items-start justify-between">
+            <div class="flex-1">
+              <div class="flex items-center gap-2">
+                <h3 class="font-semibold text-lg">{{ model.name }}</h3>
+                @if (model.isDownloaded) {
+                  <span class="px-2 py-0.5 bg-green-600/20 text-green-400 text-xs rounded-full">
+                    ✓ Descargado
+                  </span>
+                }
+                @if (model.isCustom) {
+                  <span class="px-2 py-0.5 bg-purple-600/20 text-purple-400 text-xs rounded-full">
+                    Custom
+                  </span>
+                }
+                @if (selectedModelId() === model.id) {
+                  <span class="px-2 py-0.5 bg-blue-600/20 text-blue-400 text-xs rounded-full">
+                    Seleccionado
+                  </span>
+                }
+              </div>
+              <p class="text-gray-400 text-sm mt-1">{{ model.description }}</p>
+              <div class="flex gap-4 mt-2 text-xs text-gray-500">
+                <span>📦 {{ model.size }}</span>
+                @if (model.vramRequired) {
+                  <span>🎮 VRAM: {{ model.vramRequired }}</span>
+                }
+              </div>
+            </div>
+
+            <div class="flex gap-2">
+              @if (model.isDownloaded) {
+                <button
+                  (click)="deleteModel(model); $event.stopPropagation()"
+                  [disabled]="isDeleting() === model.id"
+                  class="px-3 py-1.5 bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded-lg text-sm transition-colors disabled:opacity-50">
+                  @if (isDeleting() === model.id) {
+                    ⏳
+                  } @else {
+                    🗑️
+                  }
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Info -->
+    <div class="mt-8 p-4 bg-gray-800/50 rounded-xl text-sm text-gray-400">
+      <p>💡 Los modelos se descargan la primera vez que los usas y quedan cacheados en tu navegador.</p>
+      <p class="mt-1">🔒 Todo se ejecuta localmente. Tus datos nunca salen de tu dispositivo.</p>
+    </div>
+  </div>
+
+
+  <!-- Add Custom Model Modal -->
+  @if (showAddModal()) {
+    <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50" (click)="closeAddModal()">
+      <div class="bg-gray-800 rounded-2xl p-6 w-full max-w-md" (click)="$event.stopPropagation()">
+        <h2 class="text-xl font-semibold mb-4">Agregar Modelo por ID</h2>
+        <p class="text-gray-400 text-sm mb-4">
+          Ingresa el ID del modelo del registro MLC-AI (ej: Llama-3.2-1B-Instruct-q4f16_1-MLC)
+        </p>
+        <input
+          type="text"
+          [ngModel]="customModelId()"
+          (ngModelChange)="customModelId.set($event)"
+          placeholder="Model ID..."
+          class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-xl focus:outline-none focus:border-blue-500 mb-4"
+        />
+        <div class="flex gap-3 justify-end">
+          <button
+            (click)="closeAddModal()"
+            class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
+            Cancelar
+          </button>
+          <button
+            (click)="addCustomModel()"
+            [disabled]="!customModelId().trim()"
+            class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors disabled:opacity-50">
+            Agregar
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Registry Browser Modal -->
+  @if (showRegistryModal()) {
+    <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50" (click)="closeRegistryModal()">
+      <div class="bg-gray-800 rounded-2xl p-6 w-full max-w-2xl max-h-[80vh] flex flex-col" (click)="$event.stopPropagation()">
+        <h2 class="text-xl font-semibold mb-4">Explorar Registro MLC-AI</h2>
+        <input
+          type="text"
+          [ngModel]="registryFilter()"
+          (ngModelChange)="registryFilter.set($event)"
+          placeholder="Buscar modelo..."
+          class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-xl focus:outline-none focus:border-blue-500 mb-4"
+        />
+        <div class="flex-1 overflow-y-auto space-y-2">
+          @for (modelId of filteredRegistryModels(); track modelId) {
+            <div
+              class="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg hover:bg-gray-700 transition-colors">
+              <span class="text-sm truncate flex-1 mr-4">{{ modelId }}</span>
+              <button
+                (click)="addFromRegistry(modelId)"
+                class="px-3 py-1 bg-green-600 hover:bg-green-500 rounded text-sm transition-colors shrink-0">
+                + Agregar
+              </button>
+            </div>
+          }
+        </div>
+        <button
+          (click)="closeRegistryModal()"
+          class="mt-4 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  }
+</div>

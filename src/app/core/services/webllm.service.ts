@@ -1,22 +1,22 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
 import {
   ChatBackendInterface,
   ChatBackendState,
   ChatMessage,
-  LoadingProgress,
 } from '../interfaces/chat-backend.interface';
 import {
   MLCEngine,
   InitProgressReport,
   ChatCompletionMessageParam,
 } from '@mlc-ai/web-llm';
-
-const MODEL_ID = 'Llama-3.2-1B-Instruct-q4f16_1-MLC';
+import { ModelManagerService } from './model-manager.service';
 
 @Injectable({ providedIn: 'root' })
 export class WebLLMService extends ChatBackendInterface {
+  private readonly modelManager = inject(ModelManagerService);
   private engine: MLCEngine | null = null;
   private abortController: AbortController | null = null;
+  private currentModelId: string | null = null;
 
   private readonly _state = signal<ChatBackendState>({
     isInitialized: false,
@@ -73,7 +73,12 @@ export class WebLLMService extends ChatBackendInterface {
         }));
       });
 
-      await this.engine.reload(MODEL_ID);
+      const modelId = this.modelManager.selectedModelId();
+      await this.engine.reload(modelId);
+      this.currentModelId = modelId;
+
+      // Actualizar estado de descarga en el manager
+      await this.modelManager.loadModels();
 
       this._state.update((s) => ({
         ...s,
@@ -153,5 +158,25 @@ export class WebLLMService extends ChatBackendInterface {
   resetChat(): void {
     this.engine?.resetChat();
     this._currentResponse.set('');
+  }
+
+  async switchModel(modelId: string): Promise<void> {
+    if (this.currentModelId === modelId && this._state().isInitialized) {
+      return;
+    }
+
+    this.modelManager.selectModel(modelId);
+    this._state.update((s) => ({
+      ...s,
+      isInitialized: false,
+      isLoading: false,
+      error: null,
+    }));
+
+    await this.initialize();
+  }
+
+  getCurrentModelId(): string | null {
+    return this.currentModelId;
   }
 }

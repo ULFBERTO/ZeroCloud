@@ -8,11 +8,13 @@ import {
   AfterViewChecked,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import {
   ChatBackendInterface,
   ChatMessage,
 } from '../../core/interfaces/chat-backend.interface';
 import { WebLLMService } from '../../core/services/webllm.service';
+import { ModelManagerService } from '../../core/services/model-manager.service';
 
 @Component({
   selector: 'app-chat',
@@ -27,6 +29,10 @@ export class ChatComponent implements AfterViewChecked {
   @ViewChild('messagesContainer') private messagesContainer!: ElementRef;
 
   private readonly chatBackend = inject(ChatBackendInterface);
+  private readonly modelManager = inject(ModelManagerService);
+  private readonly router = inject(Router);
+
+  readonly selectedModel = this.modelManager.selectedModel;
 
   readonly state = this.chatBackend.state;
   readonly currentResponse = this.chatBackend.currentResponse;
@@ -102,6 +108,10 @@ export class ChatComponent implements AfterViewChecked {
   clearChat(): void {
     this.messages.set([]);
     this.chatBackend.resetChat();
+  }
+
+  goToDashboard(): void {
+    this.router.navigate(['/']);
   }
 
   onKeyDown(event: KeyboardEvent): void {

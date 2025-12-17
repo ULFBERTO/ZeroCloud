@@ -1,7 +1,20 @@
 <div class="flex flex-col h-screen bg-gray-900 text-white">
   <!-- Header -->
   <header class="flex items-center justify-between px-6 py-4 bg-gray-800 border-b border-gray-700">
-    <h1 class="text-xl font-semibold">🤖 WebLLM Chat</h1>
+    <div class="flex items-center gap-4">
+      <button
+        (click)="goToDashboard()"
+        class="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+        title="Volver al Dashboard">
+        ←
+      </button>
+      <div>
+        <h1 class="text-xl font-semibold">🤖 WebLLM Chat</h1>
+        @if (selectedModel()) {
+          <p class="text-xs text-gray-400">{{ selectedModel()!.name }}</p>
+        }
+      </div>
+    </div>
     @if (state().isInitialized) {
       <button
         (click)="clearChat()"
@@ -43,6 +56,13 @@
             Ejecuta un LLM directamente en tu navegador usando WebGPU. 
             Sin servidores, 100% privado.
           </p>
+          @if (selectedModel()) {
+            <div class="bg-gray-800 rounded-xl p-4 max-w-sm mx-auto">
+              <p class="text-sm text-gray-400">Modelo seleccionado:</p>
+              <p class="font-medium">{{ selectedModel()!.name }}</p>
+              <p class="text-xs text-gray-500 mt-1">{{ selectedModel()!.size }}</p>
+            </div>
+          }
           <button
             (click)="initializeModel()"
             class="px-8 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl font-medium transition-colors">
