@@ -1,160 +1,266 @@
-<div class="flex flex-col h-screen bg-gray-900 text-white">
-  <!-- Header -->
-  <header class="flex items-center justify-between px-6 py-4 bg-gray-800 border-b border-gray-700">
-    <div class="flex items-center gap-4">
-      <button
-        (click)="goToDashboard()"
-        class="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-        title="Volver al Dashboard">
-        ←
-      </button>
-      <div>
-        <h1 class="text-xl font-semibold">🤖 WebLLM Chat</h1>
-        @if (selectedModel()) {
-          <p class="text-xs text-gray-400">{{ selectedModel()!.name }}</p>
-        }
-      </div>
-    </div>
-    @if (state().isInitialized) {
-      <button
-        (click)="clearChat()"
-        class="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
-        Limpiar Chat
-      </button>
-    }
-  </header>
-
-  <!-- Loading Screen -->
-  @if (!state().isInitialized && !state().error) {
-    <div class="flex-1 flex flex-col items-center justify-center p-8">
-      @if (state().isLoading) {
-        <div class="w-full max-w-md space-y-4">
-          <div class="text-center mb-6">
-            <div class="text-4xl mb-4">⚡</div>
-            <h2 class="text-xl font-medium">Cargando modelo de IA...</h2>
-            <p class="text-gray-400 text-sm mt-2">El modelo se cachea localmente para futuras visitas</p>
-          </div>
-          
-          <!-- Progress Bar -->
-          <div class="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
-            <div
-              class="bg-blue-500 h-full transition-all duration-300 ease-out"
-              [style.width.%]="state().loadingProgress?.progress || 0">
-            </div>
-          </div>
-          
-          <div class="flex justify-between text-sm text-gray-400">
-            <span>{{ state().loadingProgress?.text || 'Preparando...' }}</span>
-            <span>{{ state().loadingProgress?.progress || 0 }}%</span>
-          </div>
-        </div>
-      } @else {
-        <div class="text-center space-y-6">
-          <div class="text-6xl">🧠</div>
-          <h2 class="text-2xl font-semibold">Chat con IA Local</h2>
-          <p class="text-gray-400 max-w-md">
-            Ejecuta un LLM directamente en tu navegador usando WebGPU. 
-            Sin servidores, 100% privado.
-          </p>
-          @if (selectedModel()) {
-            <div class="bg-gray-800 rounded-xl p-4 max-w-sm mx-auto">
-              <p class="text-sm text-gray-400">Modelo seleccionado:</p>
-              <p class="font-medium">{{ selectedModel()!.name }}</p>
-              <p class="text-xs text-gray-500 mt-1">{{ selectedModel()!.size }}</p>
-            </div>
-          }
-          <button
-            (click)="initializeModel()"
-            class="px-8 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl font-medium transition-colors">
-            Iniciar Modelo
-          </button>
-          <p class="text-xs text-gray-500">Requiere Chrome/Edge 113+ con GPU compatible</p>
-        </div>
-      }
-    </div>
-  }
-
-
-  <!-- Error State -->
-  @if (state().error) {
-    <div class="flex-1 flex items-center justify-center p-8">
-      <div class="text-center space-y-4 max-w-md">
-        <div class="text-5xl">⚠️</div>
-        <h2 class="text-xl font-medium text-red-400">Error</h2>
-        <p class="text-gray-400">{{ state().error }}</p>
+<div class="flex h-screen bg-gray-900 text-white">
+  <!-- Sidebar -->
+  @if (showSidebar() && state().isInitialized) {
+    <aside class="w-72 bg-gray-800 border-r border-gray-700 flex flex-col">
+      <div class="p-4 border-b border-gray-700">
         <button
-          (click)="initializeModel()"
-          class="px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
-          Reintentar
+          (click)="createNewChat()"
+          class="w-full px-4 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl font-medium transition-colors flex items-center justify-center gap-2">
+          ➕ Nueva conversación
         </button>
       </div>
-    </div>
-  }
 
-  <!-- Chat Interface -->
-  @if (state().isInitialized && !state().error) {
-    <!-- Messages -->
-    <div #messagesContainer class="flex-1 overflow-y-auto p-4 space-y-4">
-      @if (displayMessages().length === 0) {
-        <div class="flex items-center justify-center h-full text-gray-500">
-          <p>Envía un mensaje para comenzar la conversación</p>
-        </div>
-      }
-
-      @for (message of displayMessages(); track message.timestamp) {
-        <div
-          class="flex"
-          [class.justify-end]="message.role === 'user'">
+      <div class="flex-1 overflow-y-auto p-2 space-y-1">
+        @for (session of sessions(); track session.id) {
           <div
-            class="max-w-[80%] px-4 py-3 rounded-2xl"
-            [class.bg-blue-600]="message.role === 'user'"
-            [class.bg-gray-700]="message.role === 'assistant'">
-            <p class="whitespace-pre-wrap break-words">{{ message.content }}</p>
-          </div>
-        </div>
-      }
-
-      @if (state().isGenerating && !currentResponse()) {
-        <div class="flex">
-          <div class="bg-gray-700 px-4 py-3 rounded-2xl">
-            <div class="flex space-x-1">
-              <span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
-              <span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></span>
-              <span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></span>
+            (click)="loadSession(session.id)"
+            class="group p-3 rounded-lg cursor-pointer transition-colors"
+            [class.bg-gray-700]="activeSession()?.id === session.id"
+            [class.hover:bg-gray-700/50]="activeSession()?.id !== session.id">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium truncate">{{ session.title }}</p>
+                <p class="text-xs text-gray-400 mt-1">
+                  {{ session.messages.length }} mensajes
+                </p>
+              </div>
+              <button
+                (click)="deleteSession(session.id, $event)"
+                class="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-600/20 rounded text-red-400 transition-all"
+                title="Eliminar">
+                🗑️
+              </button>
             </div>
           </div>
-        </div>
-      }
-    </div>
+        }
 
-    <!-- Input Area -->
-    <div class="p-4 bg-gray-800 border-t border-gray-700">
-      <div class="flex items-end gap-3 max-w-4xl mx-auto">
-        <textarea
-          [ngModel]="userInput()"
-          (ngModelChange)="userInput.set($event)"
-          (keydown)="onKeyDown($event)"
-          placeholder="Escribe tu mensaje..."
-          rows="1"
-          class="flex-1 px-4 py-3 bg-gray-700 border border-gray-600 rounded-xl resize-none focus:outline-none focus:border-blue-500 transition-colors"
-          [disabled]="state().isGenerating">
-        </textarea>
-
-        @if (state().isGenerating) {
-          <button
-            (click)="stopGeneration()"
-            class="px-4 py-3 bg-red-600 hover:bg-red-500 rounded-xl transition-colors">
-            ⏹️
-          </button>
-        } @else {
-          <button
-            (click)="sendMessage()"
-            [disabled]="!canSend()"
-            class="px-4 py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-xl transition-colors">
-            ➤
-          </button>
+        @if (sessions().length === 0) {
+          <p class="text-center text-gray-500 text-sm py-8">
+            No hay conversaciones guardadas
+          </p>
         }
       </div>
-    </div>
+
+      <div class="p-4 border-t border-gray-700 text-xs text-gray-500">
+        💾 Historial guardado localmente
+      </div>
+    </aside>
   }
+
+  <!-- Main Chat Area -->
+  <div class="flex-1 flex flex-col">
+    <!-- Header -->
+    <header class="flex items-center justify-between px-6 py-4 bg-gray-800 border-b border-gray-700">
+      <div class="flex items-center gap-4">
+        <button
+          (click)="goToDashboard()"
+          class="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+          title="Volver al Dashboard">
+          ←
+        </button>
+        @if (state().isInitialized) {
+          <button
+            (click)="toggleSidebar()"
+            class="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+            title="Toggle historial">
+            ☰
+          </button>
+        }
+        <div>
+          <h1 class="text-xl font-semibold">🤖 WebLLM Chat</h1>
+          @if (selectedModel()) {
+            <p class="text-xs text-gray-400">{{ selectedModel()!.name }}</p>
+          }
+        </div>
+      </div>
+      @if (state().isInitialized) {
+        <button
+          (click)="clearChat()"
+          class="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
+          Limpiar Chat
+        </button>
+      }
+    </header>
+
+    <!-- Loading Screen -->
+    @if (!state().isInitialized && !state().error) {
+      <div class="flex-1 flex flex-col items-center justify-center p-8">
+        @if (state().isLoading) {
+          <div class="w-full max-w-md space-y-4">
+            <div class="text-center mb-6">
+              <div class="text-4xl mb-4">⚡</div>
+              <h2 class="text-xl font-medium">Cargando modelo de IA...</h2>
+              <p class="text-gray-400 text-sm mt-2">El modelo se cachea localmente para futuras visitas</p>
+            </div>
+            <div class="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
+              <div
+                class="bg-blue-500 h-full transition-all duration-300 ease-out"
+                [style.width.%]="state().loadingProgress?.progress || 0">
+              </div>
+            </div>
+            <div class="flex justify-between text-sm text-gray-400">
+              <span>{{ state().loadingProgress?.text || 'Preparando...' }}</span>
+              <span>{{ state().loadingProgress?.progress || 0 }}%</span>
+            </div>
+          </div>
+        } @else {
+          <div class="text-center space-y-6">
+            <div class="text-6xl">🧠</div>
+            <h2 class="text-2xl font-semibold">Chat con IA Local</h2>
+            <p class="text-gray-400 max-w-md">
+              Ejecuta un LLM directamente en tu navegador usando WebGPU. 
+              Sin servidores, 100% privado.
+            </p>
+            @if (selectedModel()) {
+              <div class="bg-gray-800 rounded-xl p-4 max-w-sm mx-auto">
+                <p class="text-sm text-gray-400">Modelo seleccionado:</p>
+                <p class="font-medium">{{ selectedModel()!.name }}</p>
+                <p class="text-xs text-gray-500 mt-1">{{ selectedModel()!.size }}</p>
+              </div>
+            }
+            <button
+              (click)="initializeModel()"
+              class="px-8 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl font-medium transition-colors">
+              Iniciar Modelo
+            </button>
+            <p class="text-xs text-gray-500">Requiere Chrome/Edge 113+ con GPU compatible</p>
+          </div>
+        }
+      </div>
+    }
+
+
+    <!-- Error State -->
+    @if (state().error) {
+      <div class="flex-1 flex items-center justify-center p-8">
+        <div class="text-center space-y-4 max-w-md">
+          <div class="text-5xl">⚠️</div>
+          <h2 class="text-xl font-medium text-red-400">Error</h2>
+          <p class="text-gray-400">{{ state().error }}</p>
+          <button
+            (click)="initializeModel()"
+            class="px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
+            Reintentar
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- Chat Interface -->
+    @if (state().isInitialized && !state().error) {
+      <!-- Messages -->
+      <div #messagesContainer class="flex-1 overflow-y-auto p-4 space-y-4">
+        @if (displayMessages().length === 0) {
+          <div class="flex items-center justify-center h-full text-gray-500">
+            <p>Envía un mensaje para comenzar la conversación</p>
+          </div>
+        }
+
+        @for (message of displayMessages(); track $index) {
+          <div class="flex group" [class.justify-end]="message.role === 'user'">
+            <div class="max-w-[80%] relative">
+              <!-- Editing mode -->
+              @if (editingMessageIndex() === $index && message.role === 'user') {
+                <div class="bg-gray-700 rounded-2xl p-4 space-y-3">
+                  <textarea
+                    [ngModel]="editingContent()"
+                    (ngModelChange)="editingContent.set($event)"
+                    rows="3"
+                    class="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg resize-none focus:outline-none focus:border-blue-500">
+                  </textarea>
+                  <div class="flex gap-2 justify-end">
+                    <button
+                      (click)="cancelEdit()"
+                      class="px-3 py-1.5 bg-gray-600 hover:bg-gray-500 rounded-lg text-sm transition-colors">
+                      Cancelar
+                    </button>
+                    <button
+                      (click)="saveEditAndRegenerate()"
+                      [disabled]="state().isGenerating"
+                      class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm transition-colors disabled:opacity-50">
+                      Guardar y regenerar
+                    </button>
+                  </div>
+                </div>
+              } @else {
+                <!-- Normal message -->
+                <div
+                  class="px-4 py-3 rounded-2xl"
+                  [class.bg-blue-600]="message.role === 'user'"
+                  [class.bg-gray-700]="message.role === 'assistant'">
+                  <p class="whitespace-pre-wrap break-words">{{ message.content }}</p>
+                </div>
+
+                <!-- Message actions -->
+                @if (!state().isGenerating) {
+                  <div
+                    class="absolute -bottom-6 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1"
+                    [class.right-0]="message.role === 'user'"
+                    [class.left-0]="message.role === 'assistant'">
+                    @if (message.role === 'user') {
+                      <button
+                        (click)="startEditMessage($index)"
+                        class="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors"
+                        title="Editar y regenerar">
+                        ✏️
+                      </button>
+                    }
+                    <button
+                      (click)="forkFromHere($index)"
+                      class="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors"
+                      title="Crear rama desde aquí">
+                      🔀
+                    </button>
+                  </div>
+                }
+              }
+            </div>
+          </div>
+        }
+
+        @if (state().isGenerating && !currentResponse()) {
+          <div class="flex">
+            <div class="bg-gray-700 px-4 py-3 rounded-2xl">
+              <div class="flex space-x-1">
+                <span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
+                <span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></span>
+                <span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></span>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+
+      <!-- Input Area -->
+      <div class="p-4 bg-gray-800 border-t border-gray-700">
+        <div class="flex items-end gap-3 max-w-4xl mx-auto">
+          <textarea
+            [ngModel]="userInput()"
+            (ngModelChange)="userInput.set($event)"
+            (keydown)="onKeyDown($event)"
+            placeholder="Escribe tu mensaje..."
+            rows="1"
+            class="flex-1 px-4 py-3 bg-gray-700 border border-gray-600 rounded-xl resize-none focus:outline-none focus:border-blue-500 transition-colors"
+            [disabled]="state().isGenerating">
+          </textarea>
+
+          @if (state().isGenerating) {
+            <button
+              (click)="stopGeneration()"
+              class="px-4 py-3 bg-red-600 hover:bg-red-500 rounded-xl transition-colors">
+              ⏹️
+            </button>
+          } @else {
+            <button
+              (click)="sendMessage()"
+              [disabled]="!canSend()"
+              class="px-4 py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-xl transition-colors">
+              ➤
+            </button>
+          }
+        </div>
+      </div>
+    }
+  </div>
 </div>

@@ -6,6 +6,7 @@ import {
   ViewChild,
   ElementRef,
   AfterViewChecked,
+  OnInit,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -15,6 +16,7 @@ import {
 } from '../../core/interfaces/chat-backend.interface';
 import { WebLLMService } from '../../core/services/webllm.service';
 import { ModelManagerService } from '../../core/services/model-manager.service';
+import { ChatHistoryService } from '../../core/services/chat-history.service';
 
 @Component({
   selector: 'app-chat',
@@ -25,19 +27,27 @@ import { ModelManagerService } from '../../core/services/model-manager.service';
   ],
   templateUrl: './chat.component.html',
 })
-export class ChatComponent implements AfterViewChecked {
+export class ChatComponent implements AfterViewChecked, OnInit {
   @ViewChild('messagesContainer') private messagesContainer!: ElementRef;
 
   private readonly chatBackend = inject(ChatBackendInterface);
   private readonly modelManager = inject(ModelManagerService);
+  private readonly chatHistory = inject(ChatHistoryService);
   private readonly router = inject(Router);
 
   readonly selectedModel = this.modelManager.selectedModel;
+  readonly sessions = this.chatHistory.sortedSessions;
+  readonly activeSession = this.chatHistory.activeSession;
 
   readonly state = this.chatBackend.state;
   readonly currentResponse = this.chatBackend.currentResponse;
   readonly messages = signal<ChatMessage[]>([]);
   readonly userInput = signal<string>('');
+
+  // UI state
+  readonly showSidebar = signal(true);
+  readonly editingMessageIndex = signal<number | null>(null);
+  readonly editingContent = signal<string>('');
 
   readonly canSend = computed(
     () =>
@@ -59,6 +69,13 @@ export class ChatComponent implements AfterViewChecked {
     return msgs;
   });
 
+  ngOnInit(): void {
+    // Cargar sesión activa si existe
+    const session = this.activeSession();
+    if (session) {
+      this.messages.set([...session.messages]);
+    }
+  }
 
   ngAfterViewChecked(): void {
     this.scrollToBottom();
@@ -67,6 +84,10 @@ export class ChatComponent implements AfterViewChecked {
   async initializeModel(): Promise<void> {
     try {
       await this.chatBackend.initialize();
+      // Crear nueva sesión si no hay una activa
+      if (!this.activeSession()) {
+        this.createNewChat();
+      }
     } catch (error) {
       console.error('Error initializing model:', error);
     }
@@ -75,6 +96,11 @@ export class ChatComponent implements AfterViewChecked {
   async sendMessage(): Promise<void> {
     const content = this.userInput().trim();
     if (!content || !this.canSend()) return;
+
+    // Asegurar que hay una sesión activa
+    if (!this.activeSession()) {
+      this.createNewChat();
+    }
 
     const userMessage: ChatMessage = {
       role: 'user',
@@ -96,6 +122,12 @@ export class ChatComponent implements AfterViewChecked {
       };
 
       this.messages.update((msgs) => [...msgs, assistantMessage]);
+
+      // Guardar en historial
+      const sessionId = this.activeSession()?.id;
+      if (sessionId) {
+        this.chatHistory.updateSessionMessages(sessionId, this.messages());
+      }
     } catch (error) {
       console.error('Error sending message:', error);
     }
@@ -119,6 +151,96 @@ export class ChatComponent implements AfterViewChecked {
       event.preventDefault();
       this.sendMessage();
     }
+  }
+
+  // === Historial ===
+
+  toggleSidebar(): void {
+    this.showSidebar.update((v) => !v);
+  }
+
+  createNewChat(): void {
+    const modelId = this.modelManager.selectedModelId();
+    this.chatHistory.createSession(modelId);
+    this.messages.set([]);
+    this.chatBackend.resetChat();
+  }
+
+  loadSession(sessionId: string): void {
+    this.chatHistory.setActiveSession(sessionId);
+    const session = this.chatHistory.activeSession();
+    if (session) {
+      this.messages.set([...session.messages]);
+      this.chatBackend.resetChat();
+    }
+  }
+
+  deleteSession(sessionId: string, event: Event): void {
+    event.stopPropagation();
+    if (confirm('¿Eliminar esta conversación?')) {
+      this.chatHistory.deleteSession(sessionId);
+      if (this.activeSession()?.id === sessionId) {
+        this.messages.set([]);
+      }
+    }
+  }
+
+  // === Edición de mensajes ===
+
+  startEditMessage(index: number): void {
+    const msg = this.messages()[index];
+    if (msg.role !== 'user') return;
+    this.editingMessageIndex.set(index);
+    this.editingContent.set(msg.content);
+  }
+
+  cancelEdit(): void {
+    this.editingMessageIndex.set(null);
+    this.editingContent.set('');
+  }
+
+  async saveEditAndRegenerate(): Promise<void> {
+    const index = this.editingMessageIndex();
+    if (index === null) return;
+
+    const sessionId = this.activeSession()?.id;
+    if (!sessionId) return;
+
+    const newContent = this.editingContent().trim();
+    if (!newContent) return;
+
+    // Editar mensaje y cortar historial
+    const newMessages = this.chatHistory.editMessageAt(sessionId, index, newContent);
+    this.messages.set(newMessages);
+    this.cancelEdit();
+
+    // Regenerar respuesta
+    this.chatBackend.resetChat();
+    try {
+      const history = newMessages.filter((m) => m.role !== 'system');
+      const response = await this.chatBackend.sendMessage(newContent, history.slice(0, -1));
+
+      const assistantMessage: ChatMessage = {
+        role: 'assistant',
+        content: response,
+        timestamp: new Date(),
+      };
+
+      this.messages.update((msgs) => [...msgs, assistantMessage]);
+      this.chatHistory.updateSessionMessages(sessionId, this.messages());
+    } catch (error) {
+      console.error('Error regenerating:', error);
+    }
+  }
+
+  // Fork desde un punto específico
+  forkFromHere(index: number): void {
+    const sessionId = this.activeSession()?.id;
+    if (!sessionId) return;
+
+    const newSession = this.chatHistory.forkFromMessage(sessionId, index);
+    this.messages.set([...newSession.messages]);
+    this.chatBackend.resetChat();
   }
 
   private scrollToBottom(): void {
