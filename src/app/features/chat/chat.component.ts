@@ -7,6 +7,7 @@ import {
   ElementRef,
   AfterViewChecked,
   OnInit,
+  OnDestroy,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -17,22 +18,25 @@ import {
 import { WebLLMService } from '../../core/services/webllm.service';
 import { ModelManagerService } from '../../core/services/model-manager.service';
 import { ChatHistoryService } from '../../core/services/chat-history.service';
+import { P2PSyncService } from '../../core/services/p2p-sync.service';
+import { SyncModalComponent } from './sync-modal/sync-modal.component';
 
 @Component({
   selector: 'app-chat',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, SyncModalComponent],
   providers: [
     { provide: ChatBackendInterface, useClass: WebLLMService },
   ],
   templateUrl: './chat.component.html',
 })
-export class ChatComponent implements AfterViewChecked, OnInit {
+export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
   @ViewChild('messagesContainer') private messagesContainer!: ElementRef;
 
   private readonly chatBackend = inject(ChatBackendInterface);
   private readonly modelManager = inject(ModelManagerService);
   private readonly chatHistory = inject(ChatHistoryService);
+  private readonly p2pSync = inject(P2PSyncService);
   private readonly router = inject(Router);
 
   readonly selectedModel = this.modelManager.selectedModel;
@@ -48,6 +52,13 @@ export class ChatComponent implements AfterViewChecked, OnInit {
   readonly showSidebar = signal(true);
   readonly editingMessageIndex = signal<number | null>(null);
   readonly editingContent = signal<string>('');
+  readonly showSyncModal = signal(false);
+
+  // P2P state
+  readonly isP2PConnected = this.p2pSync.isConnected;
+  readonly connectedPeersCount = computed(() => this.p2pSync.connectedPeers().length);
+
+  private p2pTaskHandler = ((event: Event) => this.handleP2PTask(event as CustomEvent)) as EventListener;
 
   readonly canSend = computed(
     () =>
@@ -74,6 +85,26 @@ export class ChatComponent implements AfterViewChecked, OnInit {
     const session = this.activeSession();
     if (session) {
       this.messages.set([...session.messages]);
+    }
+
+    // Escuchar tareas P2P
+    window.addEventListener('p2p-inference-task', this.p2pTaskHandler);
+  }
+
+  ngOnDestroy(): void {
+    window.removeEventListener('p2p-inference-task', this.p2pTaskHandler);
+  }
+
+  private async handleP2PTask(event: CustomEvent): Promise<void> {
+    if (!this.state().isInitialized) return;
+
+    const { taskId, prompt, fromId } = event.detail;
+
+    try {
+      const response = await this.chatBackend.sendMessage(prompt, []);
+      this.p2pSync.sendInferenceResult(taskId, fromId, response);
+    } catch (error) {
+      console.error('P2P inference error:', error);
     }
   }
 
@@ -144,6 +175,14 @@ export class ChatComponent implements AfterViewChecked, OnInit {
 
   goToDashboard(): void {
     this.router.navigate(['/']);
+  }
+
+  openSyncModal(): void {
+    this.showSyncModal.set(true);
+  }
+
+  closeSyncModal(): void {
+    this.showSyncModal.set(false);
   }
 
   onKeyDown(event: KeyboardEvent): void {

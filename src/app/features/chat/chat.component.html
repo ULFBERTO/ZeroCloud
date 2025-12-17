@@ -74,11 +74,29 @@
         </div>
       </div>
       @if (state().isInitialized) {
-        <button
-          (click)="clearChat()"
-          class="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
-          Limpiar Chat
-        </button>
+        <div class="flex items-center gap-2">
+          <!-- P2P Sync Button -->
+          <button
+            (click)="openSyncModal()"
+            class="px-4 py-2 text-sm rounded-lg transition-colors flex items-center gap-2"
+            [class.bg-green-600]="isP2PConnected()"
+            [class.hover:bg-green-500]="isP2PConnected()"
+            [class.bg-gray-700]="!isP2PConnected()"
+            [class.hover:bg-gray-600]="!isP2PConnected()">
+            🔗
+            @if (isP2PConnected()) {
+              <span class="text-xs">{{ connectedPeersCount() }} conectado(s)</span>
+            } @else {
+              <span class="text-xs">P2P</span>
+            }
+          </button>
+
+          <button
+            (click)="clearChat()"
+            class="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
+            Limpiar Chat
+          </button>
+        </div>
       }
     </header>
 
@@ -263,4 +281,9 @@
       </div>
     }
   </div>
+
+  <!-- P2P Sync Modal -->
+  @if (showSyncModal()) {
+    <app-sync-modal (close)="closeSyncModal()" />
+  }
 </div>
