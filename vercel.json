@@ -1,6 +1,6 @@
 {
   "buildCommand": "npm run build",
-  "outputDirectory": "dist/ZeroCloud/browser",
+  "outputDirectory": "dist/ZeroCloud",
   "framework": "angular",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
