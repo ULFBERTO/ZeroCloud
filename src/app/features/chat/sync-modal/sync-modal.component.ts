@@ -13,109 +13,76 @@ export class SyncModalComponent {
 
   readonly close = output<void>();
 
+  readonly roomCode = this.p2pSync.roomCode;
+  readonly connectionMode = this.p2pSync.connectionMode;
   readonly peers = this.p2pSync.peers;
   readonly connectedPeers = this.p2pSync.connectedPeers;
-  readonly syncToken = this.p2pSync.syncToken;
   readonly isConnected = this.p2pSync.isConnected;
-  readonly connectionMode = this.p2pSync.connectionMode;
-  readonly serverUrl = this.p2pSync.serverUrl;
   readonly error = this.p2pSync.error;
 
-  readonly deviceInfo = this.p2pSync.getDeviceInfo();
+  readonly deviceInfo = signal(this.p2pSync.getDeviceInfo());
+  readonly joinCode = signal('');
+  readonly isLoading = signal(false);
   readonly editingName = signal(false);
-  readonly newDeviceName = signal(this.deviceInfo.name);
-  readonly editingServer = signal(false);
-  readonly newServerUrl = signal(this.p2pSync.serverUrl());
-  readonly joinToken = signal('');
-  readonly activeTab = signal<'connect' | 'peers'>('connect');
-  readonly isConnecting = signal(false);
+  readonly newDeviceName = signal('');
 
-  async connectToServer(): Promise<void> {
-    this.isConnecting.set(true);
+  async createRoom(): Promise<void> {
+    this.isLoading.set(true);
     try {
-      await this.p2pSync.connectToServer();
+      await this.p2pSync.createRoom();
     } catch (e) {
-      console.error('Connection error:', e);
+      console.error('Error creating room:', e);
     } finally {
-      this.isConnecting.set(false);
+      this.isLoading.set(false);
+    }
+  }
+
+  async joinRoom(): Promise<void> {
+    const code = this.joinCode().trim().toUpperCase();
+    if (code.length < 4) return;
+
+    this.isLoading.set(true);
+    try {
+      await this.p2pSync.joinRoom(code);
+      this.joinCode.set('');
+    } catch (e) {
+      console.error('Error joining room:', e);
+    } finally {
+      this.isLoading.set(false);
     }
   }
 
   disconnect(): void {
-    this.p2pSync.disconnectFromServer();
+    this.p2pSync.disconnect();
   }
 
-  async createRoom(): Promise<void> {
-    const token = this.p2pSync.generateSyncToken();
-    await this.p2pSync.joinRoom(token);
-  }
-
-  async joinRoom(): Promise<void> {
-    const token = this.joinToken().trim().toUpperCase();
-    if (token.length >= 4) {
-      await this.p2pSync.joinRoom(token);
-      this.joinToken.set('');
-      this.activeTab.set('peers');
+  copyCode(): void {
+    const code = this.roomCode();
+    if (code) {
+      navigator.clipboard.writeText(code);
     }
-  }
-
-  leaveRoom(): void {
-    this.p2pSync.leaveRoom();
   }
 
   startEditName(): void {
     this.editingName.set(true);
-    this.newDeviceName.set(this.deviceInfo.name);
+    this.newDeviceName.set(this.deviceInfo().name);
   }
 
   saveName(): void {
     const name = this.newDeviceName().trim();
     if (name) {
       this.p2pSync.setDeviceName(name);
-      this.deviceInfo.name = name;
+      this.deviceInfo.set({ ...this.deviceInfo(), name });
     }
     this.editingName.set(false);
-  }
-
-  startEditServer(): void {
-    this.editingServer.set(true);
-    this.newServerUrl.set(this.p2pSync.serverUrl());
-  }
-
-  saveServer(): void {
-    const url = this.newServerUrl().trim();
-    if (url) {
-      this.p2pSync.setServerUrl(url);
-    }
-    this.editingServer.set(false);
-  }
-
-  copyToken(): void {
-    const token = this.syncToken();
-    if (token) {
-      navigator.clipboard.writeText(token);
-    }
   }
 
   getStatusColor(status: PeerDevice['status']): string {
     const colors: Record<PeerDevice['status'], string> = {
       connected: 'bg-green-500',
       connecting: 'bg-yellow-500',
-      pending: 'bg-yellow-500',
       error: 'bg-red-500',
-      discovered: 'bg-gray-500',
     };
     return colors[status] || 'bg-gray-500';
-  }
-
-  getStatusText(status: PeerDevice['status']): string {
-    const texts: Record<PeerDevice['status'], string> = {
-      connected: 'Conectado',
-      connecting: 'Conectando...',
-      pending: 'Pendiente',
-      error: 'Error',
-      discovered: 'Descubierto',
-    };
-    return texts[status] || 'Desconocido';
   }
 }
