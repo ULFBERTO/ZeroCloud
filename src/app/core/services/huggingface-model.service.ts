@@ -23,8 +23,8 @@ const DEFAULT_MODEL_KEY = 'hf_default_model';
 const DEFAULT_MODELS: HFModelInfo[] = [
   {
     repoId: 'ULFBERTO/gpt-don-quijote',
-    name: 'GPT Don Quijote',
-    description: 'Modelo GPT entrenado con el texto de Don Quijote de la Mancha',
+    name: 'GPT OxideLLM_5M',
+    description: 'Modelo GPT entrenado con el texto de OxideLLM_5M de la Mancha',
     size: '~50MB',
     isDefault: true,
   },

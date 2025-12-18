@@ -20,7 +20,7 @@ import { TFJSModelService } from '../../core/services/tfjs-model.service';
               ← Volver
             </button>
             <div>
-              <h1 class="text-xl font-bold">🧠 GPT Don Quijote</h1>
+              <h1 class="text-xl font-bold">🧠 GPT OxideLLM_5M</h1>
               <p class="text-sm text-gray-400">Modelo TFJS en navegador</p>
             </div>
           </div>
@@ -75,9 +75,9 @@ import { TFJSModelService } from '../../core/services/tfjs-model.service';
           <div class="flex-1 flex items-center justify-center">
             <div class="text-center max-w-md">
               <div class="text-6xl mb-4">🤖</div>
-              <h2 class="text-xl font-bold mb-2">GPT Don Quijote</h2>
+              <h2 class="text-xl font-bold mb-2">GPT OxideLLM_5M</h2>
               <p class="text-gray-400 mb-4">
-                Modelo de lenguaje entrenado con el texto de Don Quijote de la Mancha.
+                Modelo de lenguaje entrenado con el texto de OxideLLM_5M de la Mancha.
                 Se ejecuta completamente en tu navegador.
               </p>
               <button
