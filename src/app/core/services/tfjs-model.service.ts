@@ -31,6 +31,10 @@ export interface ModelConfig {
 
 const DEFAULT_MODEL_KEY = 'tfjs_default_model';
 
+// Proxy CORS para evitar restricciones de Hugging Face
+// Opciones: corsproxy.io, allorigins.win, o tu propio proxy
+const CORS_PROXY = 'https://corsproxy.io/?';
+
 // Modelo principal - OxideLLM_5M (entrenado con corpus español completo)
 const DEFAULT_MODELS: TFJSModelConfig[] = [
   {
@@ -92,25 +96,37 @@ export class TFJSModelService {
 
     try {
       const baseUrl = modelConfig.baseUrl;
+      
+      // Helper para construir URL con proxy CORS
+      const buildUrl = (file: string) => `${CORS_PROXY}${encodeURIComponent(`${baseUrl}/${file}`)}`;
 
       // 1. Cargar vocabulario
       console.log('📚 Cargando vocabulario...');
-      const vocabResponse = await fetch(`${baseUrl}/vocab.json`);
-      if (!vocabResponse.ok) throw new Error('No se pudo cargar vocab.json');
+      const vocabResponse = await fetch(buildUrl('vocab.json'));
+      if (!vocabResponse.ok) {
+        console.error('vocab.json status:', vocabResponse.status, vocabResponse.statusText);
+        throw new Error(`No se pudo cargar vocab.json (${vocabResponse.status})`);
+      }
       this.vocab = await vocabResponse.json();
       this._state.update((s) => ({ ...s, progress: 30 }));
 
       // 2. Cargar configuración del modelo
       console.log('⚙️ Cargando configuración...');
-      const configResponse = await fetch(`${baseUrl}/config.json`);
-      if (!configResponse.ok) throw new Error('No se pudo cargar config.json');
+      const configResponse = await fetch(buildUrl('config.json'));
+      if (!configResponse.ok) {
+        console.error('config.json status:', configResponse.status, configResponse.statusText);
+        throw new Error(`No se pudo cargar config.json (${configResponse.status})`);
+      }
       this.modelConfig = await configResponse.json();
       this._state.update((s) => ({ ...s, progress: 50 }));
 
       // 3. Cargar pesos (solo embeddings para generación simple)
       console.log('🧠 Cargando pesos...');
-      const weightsResponse = await fetch(`${baseUrl}/weights.bin`);
-      if (!weightsResponse.ok) throw new Error('No se pudo cargar weights.bin');
+      const weightsResponse = await fetch(buildUrl('weights.bin'));
+      if (!weightsResponse.ok) {
+        console.error('weights.bin status:', weightsResponse.status, weightsResponse.statusText);
+        throw new Error(`No se pudo cargar weights.bin (${weightsResponse.status})`);
+      }
       const weightsBuffer = await weightsResponse.arrayBuffer();
       this._state.update((s) => ({ ...s, progress: 90 }));
 
