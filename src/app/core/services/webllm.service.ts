@@ -55,7 +55,7 @@ export class WebLLMService extends ChatBackendInterface {
 
   async detectAvailableGPUs(): Promise<GPUInfo[]> {
     interface GPUAdapterLike {
-      features?: Set<string>;
+      features?: { has: (key: string) => boolean };
       info?: { vendor?: string; architecture?: string; device?: string };
       requestAdapterInfo?: () => Promise<{ vendor?: string; architecture?: string; device?: string }>;
     }
@@ -93,7 +93,7 @@ export class WebLLMService extends ChatBackendInterface {
     try {
       const highPerfAdapter = await nav.gpu.requestAdapter({ powerPreference: 'high-performance' });
       if (highPerfAdapter) {
-        const { name, vendor, supportsF16 } = await getGPUInfo(highPerfAdapter);
+        const { name, vendor, supportsF16 } = await getGPUInfo(highPerfAdapter as GPUAdapterLike);
         gpus.push({
           id: 'high-performance',
           name: name || 'GPU Dedicada',
@@ -108,7 +108,7 @@ export class WebLLMService extends ChatBackendInterface {
     try {
       const lowPowerAdapter = await nav.gpu.requestAdapter({ powerPreference: 'low-power' });
       if (lowPowerAdapter) {
-        const { name, vendor, supportsF16 } = await getGPUInfo(lowPowerAdapter);
+        const { name, vendor, supportsF16 } = await getGPUInfo(lowPowerAdapter as GPUAdapterLike);
         // Solo agregar si es diferente a la de alto rendimiento
         if (gpus.length === 0 || gpus[0].name !== name) {
           gpus.push({

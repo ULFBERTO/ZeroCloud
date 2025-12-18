@@ -1,12 +1,13 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { DecimalPipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { TFJSModelService } from '../../core/services/tfjs-model.service';
 
 @Component({
   selector: 'app-tfjs-chat',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, DecimalPipe],
   template: `
     <div class="min-h-screen bg-gray-900 text-white flex flex-col">
       <!-- Header -->
