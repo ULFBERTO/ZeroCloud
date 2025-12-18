@@ -22,7 +22,7 @@ const DEFAULT_MODEL_KEY = 'hf_default_model';
 // Modelo principal por defecto
 const DEFAULT_MODELS: HFModelInfo[] = [
   {
-    repoId: 'ULFBERTO/gpt-don-quijote',
+    repoId: 'ULFBERTO/OxideLLM_5M-tfjs',
     name: 'GPT OxideLLM_5M',
     description: 'Modelo GPT entrenado con el texto de OxideLLM_5M de la Mancha',
     size: '~50MB',
