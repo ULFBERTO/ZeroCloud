@@ -23,10 +23,18 @@ const CUSTOM_MODELS_KEY = 'webllm_custom_models';
 // Modelos recomendados para navegador (ligeros)
 const RECOMMENDED_MODELS: Omit<ModelInfo, 'isDownloaded'>[] = [
   {
+    id: 'Llama-3.2-1B-Instruct-q4f32_1-MLC',
+    name: 'Llama 3.2 1B (Compatible)',
+    size: '~800MB',
+    description: '⭐ Recomendado para GPUs Intel/antiguas. Usa float32.',
+    isCustom: false,
+    vramRequired: '2GB',
+  },
+  {
     id: 'Llama-3.2-1B-Instruct-q4f16_1-MLC',
     name: 'Llama 3.2 1B',
     size: '~700MB',
-    description: 'Modelo compacto y rápido. Ideal para empezar.',
+    description: 'Modelo compacto y rápido. Requiere GPU con float16.',
     isCustom: false,
     vramRequired: '2GB',
   },
@@ -47,10 +55,10 @@ const RECOMMENDED_MODELS: Omit<ModelInfo, 'isDownloaded'>[] = [
     vramRequired: '4GB',
   },
   {
-    id: 'Qwen2.5-1.5B-Instruct-q4f16_1-MLC',
-    name: 'Qwen 2.5 1.5B',
-    size: '~1GB',
-    description: 'Modelo de Alibaba, buen soporte multilingüe.',
+    id: 'Qwen2.5-1.5B-Instruct-q4f32_1-MLC',
+    name: 'Qwen 2.5 1.5B (Compatible)',
+    size: '~1.2GB',
+    description: '⭐ Compatible con GPUs Intel/antiguas. Usa float32.',
     isCustom: false,
     vramRequired: '3GB',
   },
