@@ -31,13 +31,13 @@ export interface ModelConfig {
 
 const DEFAULT_MODEL_KEY = 'tfjs_default_model';
 
-// Modelo principal - GPT OxideLLM_5M
+// Modelo principal - OxideLLM_5M (entrenado con corpus español completo)
 const DEFAULT_MODELS: TFJSModelConfig[] = [
   {
-    repoId: 'ULFBERTO/gpt-don-quijote-tfjs',
-    name: 'GPT OxideLLM_5M',
-    description: 'Modelo GPT entrenado con el texto de OxideLLM_5M de la Mancha',
-    baseUrl: 'https://huggingface.co/ULFBERTO/OxideLLM_5M/resolve/main',
+    repoId: 'ULFBERTO/OxideLLM_5M-tfjs',
+    name: 'OxideLLM_5M',
+    description: 'Modelo GPT entrenado con corpus de literatura española (~13M caracteres)',
+    baseUrl: 'https://huggingface.co/ULFBERTO/OxideLLM_5M-tfjs/resolve/main',
   },
 ];
 
