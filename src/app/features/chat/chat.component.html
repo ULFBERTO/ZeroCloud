@@ -151,34 +151,57 @@
     <!-- Error State -->
     @if (state().error) {
       <div class="flex-1 flex items-center justify-center p-8">
-        <div class="text-center space-y-4 max-w-md">
+        <div class="text-center space-y-4 max-w-lg">
           <div class="text-5xl">⚠️</div>
           <h2 class="text-xl font-medium text-red-400">Error</h2>
-          <p class="text-gray-400">{{ state().error }}</p>
+          <p class="text-gray-400 text-sm">{{ state().error }}</p>
 
-          <!-- GPU Selector -->
-          @if (availableGPUs().length > 1) {
-            <div class="bg-gray-800 rounded-xl p-4 text-left">
-              <label class="block text-sm text-gray-400 mb-2">Selecciona otra GPU:</label>
-              <select
-                [ngModel]="selectedGPU()"
-                (ngModelChange)="onGPUChange($event)"
-                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500">
-                @for (gpu of availableGPUs(); track gpu.id) {
-                  <option [value]="gpu.id">{{ gpu.name }}</option>
-                }
-              </select>
-              <p class="text-xs text-gray-500 mt-2">
-                💡 Si tienes una GPU dedicada (NVIDIA/AMD), selecciónala para mejor rendimiento.
-              </p>
-            </div>
-          }
+          <div class="bg-gray-800 rounded-xl p-4 space-y-4 text-left">
+            <!-- GPU Selector -->
+            @if (availableGPUs().length > 1) {
+              <div>
+                <label class="block text-sm text-gray-400 mb-2">GPU:</label>
+                <select
+                  [ngModel]="selectedGPU()"
+                  (ngModelChange)="onGPUChange($event)"
+                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500">
+                  @for (gpu of availableGPUs(); track gpu.id) {
+                    <option [value]="gpu.id">{{ gpu.name }}</option>
+                  }
+                </select>
+              </div>
+            }
 
-          <button
-            (click)="initializeModel()"
-            class="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors">
-            Reintentar
-          </button>
+            <!-- Model info -->
+            @if (selectedModel()) {
+              <div>
+                <label class="block text-sm text-gray-400 mb-1">Modelo actual:</label>
+                <p class="text-sm">{{ selectedModel()!.name }} ({{ selectedModel()!.size }})</p>
+              </div>
+            }
+          </div>
+
+          <div class="flex flex-col sm:flex-row gap-2 justify-center">
+            <button
+              (click)="goToDashboard()"
+              class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-sm">
+              Cambiar modelo
+            </button>
+            <button
+              (click)="clearCacheAndRetry()"
+              class="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 rounded-lg transition-colors text-sm">
+              Limpiar caché
+            </button>
+            <button
+              (click)="initializeModel()"
+              class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors text-sm">
+              Reintentar
+            </button>
+          </div>
+
+          <p class="text-xs text-gray-500">
+            💡 GPUs antiguas (GTX 900/1000) pueden tener problemas. Prueba otro modelo como Qwen 2.5 o SmolLM2.
+          </p>
         </div>
       </div>
     }

@@ -205,9 +205,9 @@ export class WebLLMService extends ChatBackendInterface {
   private parseModelError(error: unknown): string {
     const message = error instanceof Error ? error.message : String(error);
     
-    // Errores de shader/GPU - pueden ser temporales
+    // Errores de shader/GPU
     if (message.includes('ShaderModule') || message.includes('shader')) {
-      return 'Error al compilar el modelo. Esto puede ser temporal. Intenta recargar la página o reiniciar el navegador.';
+      return 'Error de compatibilidad con la GPU. Prueba: 1) Seleccionar otra GPU, 2) Probar otro modelo (Qwen o SmolLM), 3) Limpiar caché del modelo.';
     }
     
     // Errores de memoria
@@ -222,6 +222,15 @@ export class WebLLMService extends ChatBackendInterface {
     
     // Error genérico pero amigable
     return `No se pudo cargar el modelo. ${message.length < 100 ? message : 'Intenta recargar la página.'}`;
+  }
+
+  async clearModelCache(): Promise<void> {
+    const modelId = this.modelManager.selectedModelId();
+    try {
+      await this.modelManager.deleteModel(modelId);
+    } catch {
+      // Ignorar errores de borrado
+    }
   }
 
 

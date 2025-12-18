@@ -103,6 +103,11 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
     this.webllmService.selectGPU(gpuId);
   }
 
+  async clearCacheAndRetry(): Promise<void> {
+    await this.webllmService.clearModelCache();
+    await this.initializeModel();
+  }
+
   ngOnDestroy(): void {
     window.removeEventListener('p2p-inference-task', this.p2pTaskHandler);
   }
