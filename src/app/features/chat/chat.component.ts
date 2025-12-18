@@ -15,7 +15,7 @@ import {
   ChatBackendInterface,
   ChatMessage,
 } from '../../core/interfaces/chat-backend.interface';
-import { WebLLMService } from '../../core/services/webllm.service';
+import { WebLLMService, GPUInfo } from '../../core/services/webllm.service';
 import { ModelManagerService } from '../../core/services/model-manager.service';
 import { ChatHistoryService } from '../../core/services/chat-history.service';
 import { P2PSyncService } from '../../core/services/p2p-sync.service';
@@ -34,6 +34,7 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
   @ViewChild('messagesContainer') private messagesContainer!: ElementRef;
 
   private readonly chatBackend = inject(ChatBackendInterface);
+  private readonly webllmService = inject(WebLLMService);
   private readonly modelManager = inject(ModelManagerService);
   private readonly chatHistory = inject(ChatHistoryService);
   private readonly p2pSync = inject(P2PSyncService);
@@ -42,6 +43,10 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
   readonly selectedModel = this.modelManager.selectedModel;
   readonly sessions = this.chatHistory.sortedSessions;
   readonly activeSession = this.chatHistory.activeSession;
+
+  // GPU selection
+  readonly availableGPUs = this.webllmService.availableGPUs;
+  readonly selectedGPU = this.webllmService.selectedGPU;
 
   readonly state = this.chatBackend.state;
   readonly currentResponse = this.chatBackend.currentResponse;
@@ -87,8 +92,15 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
       this.messages.set([...session.messages]);
     }
 
+    // Detectar GPUs disponibles
+    this.webllmService.detectAvailableGPUs();
+
     // Escuchar tareas P2P
     window.addEventListener('p2p-inference-task', this.p2pTaskHandler);
+  }
+
+  onGPUChange(gpuId: string): void {
+    this.webllmService.selectGPU(gpuId);
   }
 
   ngOnDestroy(): void {

@@ -11,6 +11,14 @@ import {
 } from '@mlc-ai/web-llm';
 import { ModelManagerService } from './model-manager.service';
 
+export interface GPUInfo {
+  id: string;
+  name: string;
+  powerPreference: 'high-performance' | 'low-power';
+}
+
+const GPU_PREFERENCE_KEY = 'webllm_gpu_preference';
+
 @Injectable({ providedIn: 'root' })
 export class WebLLMService extends ChatBackendInterface {
   private readonly modelManager = inject(ModelManagerService);
@@ -27,48 +35,108 @@ export class WebLLMService extends ChatBackendInterface {
   });
 
   private readonly _currentResponse = signal<string>('');
+  private readonly _availableGPUs = signal<GPUInfo[]>([]);
+  private readonly _selectedGPU = signal<string>(
+    localStorage.getItem(GPU_PREFERENCE_KEY) || 'high-performance'
+  );
+
+  readonly availableGPUs = this._availableGPUs.asReadonly();
+  readonly selectedGPU = this._selectedGPU.asReadonly();
 
   readonly state = this._state.asReadonly();
   readonly currentResponse = this._currentResponse.asReadonly();
 
+  async detectAvailableGPUs(): Promise<GPUInfo[]> {
+    interface GPUAdapterLike {
+      requestAdapterInfo?: () => Promise<{ vendor?: string; architecture?: string; device?: string }>;
+    }
+
+    const nav = navigator as Navigator & {
+      gpu?: {
+        requestAdapter: (options?: { powerPreference?: string }) => Promise<GPUAdapterLike | null>;
+      };
+    };
+
+    if (!nav.gpu) return [];
+
+    const gpus: GPUInfo[] = [];
+
+    // Intentar obtener GPU de alto rendimiento (dedicada - NVIDIA/AMD)
+    try {
+      const highPerfAdapter = await nav.gpu.requestAdapter({ powerPreference: 'high-performance' });
+      if (highPerfAdapter) {
+        const info = await highPerfAdapter.requestAdapterInfo?.();
+        const name = info
+          ? `${info.vendor || ''} ${info.architecture || info.device || ''}`.trim() || 'GPU Dedicada'
+          : 'GPU Dedicada';
+        gpus.push({ id: 'high-performance', name, powerPreference: 'high-performance' });
+      }
+    } catch {}
+
+    // Intentar obtener GPU de bajo consumo (integrada - Intel)
+    try {
+      const lowPowerAdapter = await nav.gpu.requestAdapter({ powerPreference: 'low-power' });
+      if (lowPowerAdapter) {
+        const info = await lowPowerAdapter.requestAdapterInfo?.();
+        const name = info
+          ? `${info.vendor || ''} ${info.architecture || info.device || ''}`.trim() || 'GPU Integrada'
+          : 'GPU Integrada';
+        // Solo agregar si es diferente a la de alto rendimiento
+        if (gpus.length === 0 || gpus[0].name !== name) {
+          gpus.push({ id: 'low-power', name, powerPreference: 'low-power' });
+        }
+      }
+    } catch {}
+
+    this._availableGPUs.set(gpus);
+    return gpus;
+  }
+
+  selectGPU(gpuId: string): void {
+    this._selectedGPU.set(gpuId);
+    localStorage.setItem(GPU_PREFERENCE_KEY, gpuId);
+  }
+
   async checkWebGPUSupport(): Promise<{ supported: boolean; error?: string; adapterInfo?: string }> {
     interface GPUAdapterLike {
-      requestAdapterInfo?: () => Promise<{ vendor?: string; architecture?: string }>;
+      requestAdapterInfo?: () => Promise<{ vendor?: string; architecture?: string; device?: string }>;
     }
-    
-    const nav = navigator as Navigator & { 
-      gpu?: { 
-        requestAdapter: (options?: { powerPreference?: string }) => Promise<GPUAdapterLike | null> 
-      } 
+
+    const nav = navigator as Navigator & {
+      gpu?: {
+        requestAdapter: (options?: { powerPreference?: string }) => Promise<GPUAdapterLike | null>;
+      };
     };
-    
+
     if (!nav.gpu) {
-      return { 
-        supported: false, 
-        error: 'Tu navegador no soporta WebGPU. Usa Chrome 113+ (Android/PC) o Edge 113+.' 
+      return {
+        supported: false,
+        error: 'Tu navegador no soporta WebGPU. Usa Chrome 113+ (Android/PC) o Edge 113+.',
       };
     }
 
     try {
-      // Intentar obtener cualquier GPU disponible (móvil o PC)
-      const adapter = await nav.gpu.requestAdapter();
+      // Usar la GPU seleccionada por el usuario
+      const preference = this._selectedGPU() as 'high-performance' | 'low-power';
+      const adapter = await nav.gpu.requestAdapter({ powerPreference: preference });
 
       if (!adapter) {
-        return { 
-          supported: false, 
-          error: 'No se encontró una GPU compatible con WebGPU.' 
+        return {
+          supported: false,
+          error: 'No se encontró una GPU compatible con WebGPU.',
         };
       }
 
-      // Obtener info del adaptador para mostrar al usuario
       const info = await adapter.requestAdapterInfo?.();
-      const adapterInfo = info ? `${info.vendor || 'GPU'} ${info.architecture || ''}`.trim() : 'GPU detectada';
+      const adapterInfo = info
+        ? `${info.vendor || ''} ${info.architecture || info.device || ''}`.trim() || 'GPU detectada'
+        : 'GPU detectada';
 
       return { supported: true, adapterInfo };
     } catch {
-      return { 
-        supported: false, 
-        error: 'Error al acceder a la GPU.' 
+      return {
+        supported: false,
+        error: 'Error al acceder a la GPU.',
       };
     }
   }
