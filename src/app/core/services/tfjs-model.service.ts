@@ -76,10 +76,23 @@ export class TFJSModelService {
    */
   async loadModel(modelId?: string): Promise<void> {
     const targetId = modelId || this._selectedModelId();
-    const modelConfig = this._models().find((m) => m.repoId === targetId);
+    console.log('🔍 Buscando modelo:', targetId);
+    console.log('📋 Modelos disponibles:', this._models().map(m => m.repoId));
+    
+    let modelConfig = this._models().find((m) => m.repoId === targetId);
+
+    // Fallback: si no se encuentra, usar el primer modelo disponible
+    if (!modelConfig) {
+      console.warn('⚠️ Modelo no encontrado, usando modelo por defecto');
+      modelConfig = this._models()[0];
+      if (modelConfig) {
+        this._selectedModelId.set(modelConfig.repoId);
+        localStorage.setItem(DEFAULT_MODEL_KEY, modelConfig.repoId);
+      }
+    }
 
     if (!modelConfig) {
-      this._state.update((s) => ({ ...s, error: 'Modelo no encontrado' }));
+      this._state.update((s) => ({ ...s, error: 'No hay modelos disponibles' }));
       return;
     }
 
