@@ -75,6 +75,24 @@
       </div>
       @if (state().isInitialized) {
         <div class="flex items-center gap-2">
+          <!-- GPU Cluster Button -->
+          @if (isP2PConnected()) {
+            <button
+              (click)="toggleClusterPanel()"
+              class="px-4 py-2 text-sm rounded-lg transition-colors flex items-center gap-2"
+              [class.bg-purple-600]="isClusterActive()"
+              [class.hover:bg-purple-500]="isClusterActive()"
+              [class.bg-gray-700]="!isClusterActive()"
+              [class.hover:bg-gray-600]="!isClusterActive()">
+              🖥️
+              @if (isClusterActive()) {
+                <span class="text-xs">Cluster</span>
+              } @else {
+                <span class="text-xs">GPU</span>
+              }
+            </button>
+          }
+
           <!-- P2P Sync Button -->
           <button
             (click)="openSyncModal()"
@@ -366,5 +384,26 @@
   <!-- P2P Sync Modal -->
   @if (showSyncModal()) {
     <app-sync-modal (close)="closeSyncModal()" />
+  }
+
+  <!-- GPU Cluster Panel (Slide-in) -->
+  @if (showClusterPanel()) {
+    <div class="fixed inset-0 z-40" (click)="toggleClusterPanel()">
+      <div class="absolute inset-0 bg-black/50"></div>
+    </div>
+    <aside 
+      class="fixed right-0 top-0 h-full w-96 bg-gray-900 border-l border-gray-700 z-50 
+             overflow-y-auto transform transition-transform duration-300 ease-out p-4"
+      (click)="$event.stopPropagation()">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold">WebGPU Compute Sharing</h2>
+        <button 
+          (click)="toggleClusterPanel()"
+          class="p-2 hover:bg-gray-700 rounded-lg transition-colors">
+          ✕
+        </button>
+      </div>
+      <app-cluster-panel />
+    </aside>
   }
 </div>

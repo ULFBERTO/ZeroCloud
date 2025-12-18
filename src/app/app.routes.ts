@@ -11,4 +11,9 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/chat/chat.component').then((m) => m.ChatComponent),
   },
+  {
+    path: 'tfjs-chat',
+    loadComponent: () =>
+      import('./features/tfjs-chat/tfjs-chat.component').then((m) => m.TFJSChatComponent),
+  },
 ];

@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ModelManagerService, ModelInfo } from '../../core/services/model-manager.service';
 import { WebLLMService } from '../../core/services/webllm.service';
+import { HuggingFaceModelService, HFModelInfo } from '../../core/services/huggingface-model.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -14,12 +15,18 @@ export class DashboardComponent {
   private readonly modelManager = inject(ModelManagerService);
   private readonly webllm = inject(WebLLMService);
   private readonly router = inject(Router);
+  private readonly hfService = inject(HuggingFaceModelService);
 
   readonly models = this.modelManager.models;
   readonly selectedModelId = this.modelManager.selectedModelId;
   readonly isChecking = this.modelManager.isChecking;
   readonly downloadedModels = this.modelManager.downloadedModels;
   readonly supportsF16 = this.webllm.supportsF16;
+
+  // HuggingFace models
+  readonly hfModels = this.hfService.models;
+  readonly hfDefaultModelId = this.hfService.defaultModelId;
+  readonly hfIsLoading = this.hfService.isLoading;
 
   constructor() {
     // Detectar GPUs para saber si soporta F16
@@ -30,7 +37,13 @@ export class DashboardComponent {
   readonly storageInfo = signal<{ used: string; quota: string; percent: number } | null>(null);
   readonly showAddModal = signal(false);
   readonly showRegistryModal = signal(false);
+  readonly showHFModal = signal(false);
+  readonly showHFDownloadModal = signal(false);
   readonly customModelId = signal('');
+  readonly hfRepoId = signal('');
+  readonly hfSearchQuery = signal('');
+  readonly hfSearchResults = signal<HFModelInfo[]>([]);
+  readonly selectedHFModel = signal<HFModelInfo | null>(null);
   readonly isDeleting = signal<string | null>(null);
   readonly registryModels = signal<string[]>([]);
   readonly registryFilter = signal('');
@@ -95,6 +108,10 @@ export class DashboardComponent {
     this.router.navigate(['/chat']);
   }
 
+  goToTFJSChat(): void {
+    this.router.navigate(['/tfjs-chat']);
+  }
+
   openAddModal(): void {
     this.showAddModal.set(true);
   }
@@ -130,5 +147,79 @@ export class DashboardComponent {
   async refreshModels(): Promise<void> {
     await this.modelManager.loadModels();
     await this.loadStorageInfo();
+  }
+
+  // ========== HuggingFace Methods ==========
+
+  openHFModal(): void {
+    this.showHFModal.set(true);
+  }
+
+  closeHFModal(): void {
+    this.showHFModal.set(false);
+    this.hfRepoId.set('');
+    this.hfSearchQuery.set('');
+    this.hfSearchResults.set([]);
+  }
+
+  async searchHFModels(): Promise<void> {
+    const query = this.hfSearchQuery().trim();
+    if (!query) return;
+    
+    const results = await this.hfService.searchModels(query);
+    this.hfSearchResults.set(results);
+  }
+
+  addHFModel(): void {
+    const repoId = this.hfRepoId().trim();
+    if (!repoId) return;
+
+    this.hfService.addModel({
+      repoId,
+      name: repoId.split('/').pop() || repoId,
+      description: 'Modelo agregado manualmente',
+    });
+    this.closeHFModal();
+  }
+
+  addHFModelFromSearch(model: HFModelInfo): void {
+    this.hfService.addModel(model);
+    this.closeHFModal();
+  }
+
+  removeHFModel(repoId: string): void {
+    if (confirm('¿Eliminar este modelo de la lista?')) {
+      this.hfService.removeModel(repoId);
+    }
+  }
+
+  setDefaultHFModel(repoId: string): void {
+    this.hfService.setDefaultModel(repoId);
+  }
+
+  showDownloadInstructions(model: HFModelInfo): void {
+    this.selectedHFModel.set(model);
+    this.showHFDownloadModal.set(true);
+  }
+
+  closeHFDownloadModal(): void {
+    this.showHFDownloadModal.set(false);
+    this.selectedHFModel.set(null);
+  }
+
+  getCloneCommand(repoId: string): string {
+    return this.hfService.getCloneCommand(repoId);
+  }
+
+  getPythonCode(repoId: string): string {
+    return this.hfService.getPythonDownloadCode(repoId);
+  }
+
+  getModelUrl(repoId: string): string {
+    return this.hfService.getModelUrl(repoId);
+  }
+
+  copyToClipboard(text: string): void {
+    navigator.clipboard.writeText(text);
   }
 }

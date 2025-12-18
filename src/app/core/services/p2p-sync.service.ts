@@ -286,6 +286,26 @@ export class P2PSyncService {
   // === Mensajes ===
 
   private handleMessage(message: Record<string, unknown>, fromId: string): void {
+    // Routing para mensajes del cluster GPU
+    if (message['_cluster']) {
+      window.dispatchEvent(
+        new CustomEvent('p2p-cluster-message', {
+          detail: { message, fromId },
+        })
+      );
+      return;
+    }
+
+    // Routing para mensajes de compute distribuido
+    if (message['_compute']) {
+      window.dispatchEvent(
+        new CustomEvent('p2p-compute-message', {
+          detail: { message, fromId },
+        })
+      );
+      return;
+    }
+
     switch (message['type']) {
       case 'hello':
         this._peers.update((peers) => {

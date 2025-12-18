@@ -6,11 +6,18 @@
         <h1 class="text-3xl font-bold">🧠 Gestión de Modelos</h1>
         <p class="text-gray-400 mt-1">Administra los modelos de IA locales</p>
       </div>
-      <button
-        (click)="startChat()"
-        class="px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl font-medium transition-colors">
-        💬 Ir al Chat
-      </button>
+      <div class="flex gap-3">
+        <button
+          (click)="goToTFJSChat()"
+          class="px-6 py-3 bg-yellow-600 hover:bg-yellow-500 rounded-xl font-medium transition-colors">
+          🤗 GPT Don Quijote
+        </button>
+        <button
+          (click)="startChat()"
+          class="px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl font-medium transition-colors">
+          💬 Ir al Chat
+        </button>
+      </div>
     </div>
 
     <!-- Storage Info -->
@@ -130,6 +137,80 @@
       <p>💡 Los modelos se descargan la primera vez que los usas y quedan cacheados en tu navegador.</p>
       <p class="mt-1">🔒 Todo se ejecuta localmente. Tus datos nunca salen de tu dispositivo.</p>
     </div>
+
+    <!-- HuggingFace Models Section -->
+    <div class="mt-12">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h2 class="text-2xl font-bold">🤗 Modelos HuggingFace</h2>
+          <p class="text-gray-400 mt-1">Modelos externos para descargar y usar con Python/TensorFlow</p>
+        </div>
+        <button
+          (click)="openHFModal()"
+          class="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 rounded-lg transition-colors">
+          ➕ Agregar Modelo HF
+        </button>
+      </div>
+
+      <div class="grid gap-4">
+        @for (model of hfModels(); track model.repoId) {
+          <div
+            class="bg-gray-800 rounded-xl p-4 border-2 transition-all"
+            [class.border-yellow-500]="hfDefaultModelId() === model.repoId"
+            [class.border-transparent]="hfDefaultModelId() !== model.repoId">
+            <div class="flex items-start justify-between">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-semibold text-lg">{{ model.name }}</h3>
+                  @if (model.isDefault) {
+                    <span class="px-2 py-0.5 bg-yellow-600/20 text-yellow-400 text-xs rounded-full">
+                      Incluido
+                    </span>
+                  }
+                  @if (hfDefaultModelId() === model.repoId) {
+                    <span class="px-2 py-0.5 bg-blue-600/20 text-blue-400 text-xs rounded-full">
+                      ⭐ Principal
+                    </span>
+                  }
+                </div>
+                <p class="text-gray-400 text-sm mt-1">{{ model.description }}</p>
+                <div class="flex gap-4 mt-2 text-xs text-gray-500">
+                  <span>📦 {{ model.size || 'Tamaño desconocido' }}</span>
+                  <a
+                    [href]="getModelUrl(model.repoId)"
+                    target="_blank"
+                    class="text-blue-400 hover:underline">
+                    🔗 Ver en HuggingFace
+                  </a>
+                </div>
+              </div>
+
+              <div class="flex gap-2">
+                <button
+                  (click)="showDownloadInstructions(model)"
+                  class="px-3 py-1.5 bg-green-600/20 hover:bg-green-600/40 text-green-400 rounded-lg text-sm transition-colors">
+                  ⬇️ Descargar
+                </button>
+                @if (hfDefaultModelId() !== model.repoId) {
+                  <button
+                    (click)="setDefaultHFModel(model.repoId)"
+                    class="px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 rounded-lg text-sm transition-colors">
+                    ⭐
+                  </button>
+                }
+                @if (!model.isDefault) {
+                  <button
+                    (click)="removeHFModel(model.repoId)"
+                    class="px-3 py-1.5 bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded-lg text-sm transition-colors">
+                    🗑️
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
   </div>
 
 
@@ -193,6 +274,134 @@
         <button
           (click)="closeRegistryModal()"
           class="mt-4 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- HuggingFace Add Model Modal -->
+  @if (showHFModal()) {
+    <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50" (click)="closeHFModal()">
+      <div class="bg-gray-800 rounded-2xl p-6 w-full max-w-lg" (click)="$event.stopPropagation()">
+        <h2 class="text-xl font-semibold mb-4">🤗 Agregar Modelo HuggingFace</h2>
+        
+        <!-- Manual Input -->
+        <div class="mb-6">
+          <label class="block text-sm text-gray-400 mb-2">Repo ID (usuario/modelo)</label>
+          <input
+            type="text"
+            [ngModel]="hfRepoId()"
+            (ngModelChange)="hfRepoId.set($event)"
+            placeholder="ej: ULFBERTO/gpt-don-quijote"
+            class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-xl focus:outline-none focus:border-yellow-500"
+          />
+        </div>
+
+        <!-- Search -->
+        <div class="mb-4">
+          <label class="block text-sm text-gray-400 mb-2">O buscar en HuggingFace</label>
+          <div class="flex gap-2">
+            <input
+              type="text"
+              [ngModel]="hfSearchQuery()"
+              (ngModelChange)="hfSearchQuery.set($event)"
+              placeholder="Buscar modelos..."
+              class="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-yellow-500"
+            />
+            <button
+              (click)="searchHFModels()"
+              [disabled]="hfIsLoading()"
+              class="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 rounded-lg transition-colors disabled:opacity-50">
+              🔍
+            </button>
+          </div>
+        </div>
+
+        <!-- Search Results -->
+        @if (hfSearchResults().length > 0) {
+          <div class="max-h-48 overflow-y-auto space-y-2 mb-4">
+            @for (result of hfSearchResults(); track result.repoId) {
+              <div
+                class="flex items-center justify-between p-2 bg-gray-700/50 rounded-lg hover:bg-gray-700 cursor-pointer"
+                (click)="addHFModelFromSearch(result)">
+                <div>
+                  <p class="text-sm font-medium">{{ result.name }}</p>
+                  <p class="text-xs text-gray-400">{{ result.repoId }}</p>
+                </div>
+                <span class="text-green-400">+</span>
+              </div>
+            }
+          </div>
+        }
+
+        <div class="flex gap-3 justify-end">
+          <button
+            (click)="closeHFModal()"
+            class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
+            Cancelar
+          </button>
+          <button
+            (click)="addHFModel()"
+            [disabled]="!hfRepoId().trim()"
+            class="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 rounded-lg transition-colors disabled:opacity-50">
+            Agregar
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- HuggingFace Download Instructions Modal -->
+  @if (showHFDownloadModal() && selectedHFModel()) {
+    <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50" (click)="closeHFDownloadModal()">
+      <div class="bg-gray-800 rounded-2xl p-6 w-full max-w-2xl" (click)="$event.stopPropagation()">
+        <h2 class="text-xl font-semibold mb-4">⬇️ Descargar {{ selectedHFModel()!.name }}</h2>
+        
+        <div class="space-y-4">
+          <!-- Git Clone -->
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">Opción 1: Git Clone</label>
+            <div class="flex gap-2">
+              <code class="flex-1 px-4 py-2 bg-gray-900 rounded-lg text-sm overflow-x-auto">
+                {{ getCloneCommand(selectedHFModel()!.repoId) }}
+              </code>
+              <button
+                (click)="copyToClipboard(getCloneCommand(selectedHFModel()!.repoId))"
+                class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
+                📋
+              </button>
+            </div>
+          </div>
+
+          <!-- Python -->
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">Opción 2: Python (huggingface_hub)</label>
+            <div class="relative">
+              <pre class="px-4 py-3 bg-gray-900 rounded-lg text-sm overflow-x-auto">{{ getPythonCode(selectedHFModel()!.repoId) }}</pre>
+              <button
+                (click)="copyToClipboard(getPythonCode(selectedHFModel()!.repoId))"
+                class="absolute top-2 right-2 px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors">
+                📋
+              </button>
+            </div>
+          </div>
+
+          <!-- Link -->
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">Ver en HuggingFace</label>
+            <a
+              [href]="getModelUrl(selectedHFModel()!.repoId)"
+              target="_blank"
+              class="text-yellow-400 hover:underline">
+              {{ getModelUrl(selectedHFModel()!.repoId) }} ↗
+            </a>
+          </div>
+        </div>
+
+        <button
+          (click)="closeHFDownloadModal()"
+          class="mt-6 w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
           Cerrar
         </button>
       </div>

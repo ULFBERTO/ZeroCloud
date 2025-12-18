@@ -19,12 +19,15 @@ import { WebLLMService, GPUInfo } from '../../core/services/webllm.service';
 import { ModelManagerService } from '../../core/services/model-manager.service';
 import { ChatHistoryService } from '../../core/services/chat-history.service';
 import { P2PSyncService } from '../../core/services/p2p-sync.service';
+import { GPUClusterService } from '../../core/services/gpu-cluster.service';
+import { DistributedInferenceService } from '../../core/services/distributed-inference.service';
 import { SyncModalComponent } from './sync-modal/sync-modal.component';
+import { ClusterPanelComponent } from './cluster-panel/cluster-panel.component';
 
 @Component({
   selector: 'app-chat',
   standalone: true,
-  imports: [FormsModule, SyncModalComponent],
+  imports: [FormsModule, SyncModalComponent, ClusterPanelComponent],
   providers: [
     { provide: ChatBackendInterface, useClass: WebLLMService },
   ],
@@ -38,6 +41,8 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
   private readonly modelManager = inject(ModelManagerService);
   private readonly chatHistory = inject(ChatHistoryService);
   private readonly p2pSync = inject(P2PSyncService);
+  private readonly gpuCluster = inject(GPUClusterService);
+  private readonly distributedInference = inject(DistributedInferenceService);
   private readonly router = inject(Router);
 
   readonly selectedModel = this.modelManager.selectedModel;
@@ -63,6 +68,11 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
   // P2P state
   readonly isP2PConnected = this.p2pSync.isConnected;
   readonly connectedPeersCount = computed(() => this.p2pSync.connectedPeers().length);
+
+  // GPU Cluster state
+  readonly showClusterPanel = signal(false);
+  readonly isClusterActive = computed(() => this.gpuCluster.localNode() !== null);
+  readonly canUseDistributed = this.distributedInference.canUseDistributed;
 
   private p2pTaskHandler = ((event: Event) => this.handleP2PTask(event as CustomEvent)) as EventListener;
 
@@ -168,14 +178,18 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
     try {
       const history = this.messages().filter((m) => m.role !== 'system');
       
-      // Si hay peers conectados y soy el host, distribuir la tarea
+      // Determinar modo de inferencia
       const isHost = this.p2pSync.connectionMode() === 'hosting';
       const hasPeers = this.p2pSync.connectedPeers().length > 0;
+      const useDistributedGPU = this.canUseDistributed();
       
       let response: string;
       
-      if (isHost && hasPeers) {
-        // Distribuir tarea a los peers
+      if (useDistributedGPU) {
+        // Usar inferencia distribuida con WebGPU Compute Sharing
+        response = await this.distributedInference.runWithFallback(content);
+      } else if (isHost && hasPeers) {
+        // Distribuir tarea a los peers (modo simple)
         response = await this.sendDistributedMessage(content, history.slice(0, -1));
       } else {
         // Procesar localmente
@@ -245,6 +259,10 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
 
   closeSyncModal(): void {
     this.showSyncModal.set(false);
+  }
+
+  toggleClusterPanel(): void {
+    this.showClusterPanel.update(v => !v);
   }
 
   onKeyDown(event: KeyboardEvent): void {
