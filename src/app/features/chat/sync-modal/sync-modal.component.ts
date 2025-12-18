@@ -1,4 +1,4 @@
-import { Component, inject, signal, output } from '@angular/core';
+import { Component, inject, signal, output, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { P2PSyncService, PeerDevice } from '../../../core/services/p2p-sync.service';
 
@@ -19,12 +19,20 @@ export class SyncModalComponent {
   readonly connectedPeers = this.p2pSync.connectedPeers;
   readonly isConnected = this.p2pSync.isConnected;
   readonly error = this.p2pSync.error;
+  readonly myStats = this.p2pSync.myStats;
+  readonly totalTasksCompleted = this.p2pSync.totalTasksCompleted;
+  readonly totalTasksInProgress = this.p2pSync.totalTasksInProgress;
 
   readonly deviceInfo = signal(this.p2pSync.getDeviceInfo());
   readonly joinCode = signal('');
   readonly isLoading = signal(false);
   readonly editingName = signal(false);
   readonly newDeviceName = signal('');
+  readonly showDisconnectConfirm = signal(false);
+
+  // Determinar si soy worker (conectado a una sala) o host
+  readonly isWorker = computed(() => this.connectionMode() === 'connected');
+  readonly isHost = computed(() => this.connectionMode() === 'hosting');
 
   async createRoom(): Promise<void> {
     this.isLoading.set(true);
@@ -50,6 +58,25 @@ export class SyncModalComponent {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  tryClose(): void {
+    // Si está conectado como worker, mostrar confirmación
+    if (this.isWorker() && this.isConnected()) {
+      this.showDisconnectConfirm.set(true);
+    } else {
+      this.close.emit();
+    }
+  }
+
+  confirmDisconnect(): void {
+    this.p2pSync.disconnect();
+    this.showDisconnectConfirm.set(false);
+    this.close.emit();
+  }
+
+  cancelDisconnect(): void {
+    this.showDisconnectConfirm.set(false);
   }
 
   disconnect(): void {

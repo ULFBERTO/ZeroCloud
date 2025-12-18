@@ -9,6 +9,7 @@ export interface ModelInfo {
   isDownloaded: boolean;
   isCustom: boolean;
   vramRequired?: string;
+  requiresF16?: boolean; // Requiere soporte float16
 }
 
 export interface CustomModelConfig {
@@ -29,30 +30,34 @@ const RECOMMENDED_MODELS: Omit<ModelInfo, 'isDownloaded'>[] = [
     description: '⭐ Recomendado para GPUs Intel/antiguas. Usa float32.',
     isCustom: false,
     vramRequired: '2GB',
+    requiresF16: false,
   },
   {
     id: 'Llama-3.2-1B-Instruct-q4f16_1-MLC',
     name: 'Llama 3.2 1B',
     size: '~700MB',
-    description: 'Modelo compacto y rápido. Requiere GPU con float16.',
+    description: 'Requiere GPU con soporte float16 (NVIDIA/AMD/Apple).',
     isCustom: false,
     vramRequired: '2GB',
+    requiresF16: true,
   },
   {
     id: 'Llama-3.2-3B-Instruct-q4f16_1-MLC',
     name: 'Llama 3.2 3B',
     size: '~1.8GB',
-    description: 'Balance entre velocidad y calidad.',
+    description: 'Balance entre velocidad y calidad. Requiere float16.',
     isCustom: false,
     vramRequired: '4GB',
+    requiresF16: true,
   },
   {
     id: 'Phi-3.5-mini-instruct-q4f16_1-MLC',
     name: 'Phi 3.5 Mini',
     size: '~2.2GB',
-    description: 'Modelo de Microsoft, excelente razonamiento.',
+    description: 'Modelo de Microsoft. Requiere float16.',
     isCustom: false,
     vramRequired: '4GB',
+    requiresF16: true,
   },
   {
     id: 'Qwen2.5-1.5B-Instruct-q4f32_1-MLC',
@@ -61,14 +66,16 @@ const RECOMMENDED_MODELS: Omit<ModelInfo, 'isDownloaded'>[] = [
     description: '⭐ Compatible con GPUs Intel/antiguas. Usa float32.',
     isCustom: false,
     vramRequired: '3GB',
+    requiresF16: false,
   },
   {
     id: 'SmolLM2-1.7B-Instruct-q4f16_1-MLC',
     name: 'SmolLM2 1.7B',
     size: '~1GB',
-    description: 'Modelo ultra ligero de Hugging Face.',
+    description: 'Modelo ultra ligero. Requiere float16.',
     isCustom: false,
     vramRequired: '2GB',
+    requiresF16: true,
   },
 ];
 

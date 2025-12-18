@@ -6,6 +6,19 @@ export interface PeerDevice {
   name: string;
   status: 'connecting' | 'connected' | 'error';
   connection?: DataConnection;
+  // Estadísticas de carga
+  tasksCompleted: number;
+  tasksInProgress: number;
+  lastTaskTime?: number; // ms que tardó la última tarea
+}
+
+export interface TaskStats {
+  taskId: string;
+  prompt: string;
+  assignedTo: string;
+  startTime: number;
+  endTime?: number;
+  status: 'pending' | 'processing' | 'completed';
 }
 
 export type ConnectionMode = 'disconnected' | 'connecting' | 'hosting' | 'connected';
@@ -24,6 +37,12 @@ export class P2PSyncService {
   private readonly _connectionMode = signal<ConnectionMode>('disconnected');
   private readonly _peers = signal<Map<string, PeerDevice>>(new Map());
   private readonly _error = signal<string | null>(null);
+  private readonly _tasks = signal<Map<string, TaskStats>>(new Map());
+  private readonly _myStats = signal<{ tasksCompleted: number; tasksInProgress: number; totalTime: number }>({
+    tasksCompleted: 0,
+    tasksInProgress: 0,
+    totalTime: 0,
+  });
 
   readonly peerId = this._peerId.asReadonly();
   readonly roomCode = this._roomCode.asReadonly();
@@ -34,6 +53,16 @@ export class P2PSyncService {
   );
   readonly isConnected = computed(() => this.connectedPeers().length > 0);
   readonly error = this._error.asReadonly();
+  readonly tasks = computed(() => Array.from(this._tasks().values()));
+  readonly myStats = this._myStats.asReadonly();
+  
+  // Estadísticas agregadas
+  readonly totalTasksCompleted = computed(() => 
+    this.peers().reduce((sum, p) => sum + p.tasksCompleted, 0) + this._myStats().tasksCompleted
+  );
+  readonly totalTasksInProgress = computed(() =>
+    this.peers().reduce((sum, p) => sum + p.tasksInProgress, 0) + this._myStats().tasksInProgress
+  );
 
   constructor() {
     this.deviceName = this.getDeviceName();
@@ -175,6 +204,8 @@ export class P2PSyncService {
         name: peerName,
         status: 'connecting',
         connection: conn,
+        tasksCompleted: 0,
+        tasksInProgress: 0,
       });
       return newPeers;
     });
@@ -224,6 +255,8 @@ export class P2PSyncService {
         name: 'Host',
         status: 'connected',
         connection: conn,
+        tasksCompleted: 0,
+        tasksInProgress: 0,
       });
       return newPeers;
     });
@@ -266,6 +299,8 @@ export class P2PSyncService {
         break;
 
       case 'inference-task':
+        // Incrementar tareas en progreso (soy worker)
+        this._myStats.update(s => ({ ...s, tasksInProgress: s.tasksInProgress + 1 }));
         window.dispatchEvent(
           new CustomEvent('p2p-inference-task', {
             detail: {
@@ -277,11 +312,34 @@ export class P2PSyncService {
         );
         break;
 
-      case 'inference-result':
+      case 'inference-result': {
+        const taskId = message['taskId'] as string;
+        // Actualizar estadísticas del peer que completó
+        this._peers.update((peers) => {
+          const newPeers = new Map(peers);
+          const peer = newPeers.get(fromId);
+          if (peer) {
+            newPeers.set(fromId, {
+              ...peer,
+              tasksCompleted: peer.tasksCompleted + 1,
+              tasksInProgress: Math.max(0, peer.tasksInProgress - 1),
+            });
+          }
+          return newPeers;
+        });
+        // Actualizar tarea
+        this._tasks.update((tasks) => {
+          const newTasks = new Map(tasks);
+          const task = newTasks.get(taskId);
+          if (task) {
+            newTasks.set(taskId, { ...task, status: 'completed', endTime: Date.now() });
+          }
+          return newTasks;
+        });
         window.dispatchEvent(
           new CustomEvent('p2p-inference-result', {
             detail: {
-              taskId: message['taskId'],
+              taskId,
               result: message['result'],
               fromId,
               fromName: this._peers().get(fromId)?.name || 'Unknown',
@@ -289,6 +347,7 @@ export class P2PSyncService {
           })
         );
         break;
+      }
 
       case 'inference-stream':
         window.dispatchEvent(
@@ -300,6 +359,35 @@ export class P2PSyncService {
             },
           })
         );
+        break;
+
+      case 'task-started':
+        // El peer empezó a procesar
+        this._peers.update((peers) => {
+          const newPeers = new Map(peers);
+          const peer = newPeers.get(fromId);
+          if (peer) {
+            newPeers.set(fromId, { ...peer, tasksInProgress: peer.tasksInProgress + 1 });
+          }
+          return newPeers;
+        });
+        break;
+
+      case 'stats-update':
+        // Actualizar estadísticas del peer
+        this._peers.update((peers) => {
+          const newPeers = new Map(peers);
+          const peer = newPeers.get(fromId);
+          if (peer) {
+            newPeers.set(fromId, {
+              ...peer,
+              tasksCompleted: (message['completed'] as number) || peer.tasksCompleted,
+              tasksInProgress: (message['inProgress'] as number) || 0,
+              lastTaskTime: message['lastTime'] as number | undefined,
+            });
+          }
+          return newPeers;
+        });
         break;
     }
   }
@@ -323,6 +411,20 @@ export class P2PSyncService {
 
   sendInferenceTask(prompt: string): string {
     const taskId = crypto.randomUUID();
+    
+    // Registrar tarea
+    this._tasks.update((tasks) => {
+      const newTasks = new Map(tasks);
+      newTasks.set(taskId, {
+        taskId,
+        prompt: prompt.substring(0, 50) + (prompt.length > 50 ? '...' : ''),
+        assignedTo: 'broadcast',
+        startTime: Date.now(),
+        status: 'pending',
+      });
+      return newTasks;
+    });
+
     this.broadcastToPeers({
       type: 'inference-task',
       taskId,
@@ -332,11 +434,41 @@ export class P2PSyncService {
   }
 
   sendInferenceResult(taskId: string, targetId: string, result: string): void {
+    // Actualizar mis estadísticas (completé una tarea)
+    this._myStats.update(s => ({
+      ...s,
+      tasksCompleted: s.tasksCompleted + 1,
+      tasksInProgress: Math.max(0, s.tasksInProgress - 1),
+    }));
+
+    // Notificar al host
     this.sendToPeer(targetId, {
       type: 'inference-result',
       taskId,
       result,
     });
+
+    // Enviar actualización de stats
+    this.broadcastToPeers({
+      type: 'stats-update',
+      completed: this._myStats().tasksCompleted,
+      inProgress: this._myStats().tasksInProgress,
+    });
+  }
+
+  // Notificar que empecé a procesar
+  notifyTaskStarted(taskId: string): void {
+    this.broadcastToPeers({ type: 'task-started', taskId });
+  }
+
+  // Obtener estadísticas de carga por peer
+  getPeerLoadStats(): { peerId: string; name: string; load: number; completed: number }[] {
+    return this.connectedPeers().map(p => ({
+      peerId: p.id,
+      name: p.name,
+      load: p.tasksInProgress,
+      completed: p.tasksCompleted,
+    }));
   }
 
   // === Desconexión ===
@@ -351,5 +483,7 @@ export class P2PSyncService {
     this._connectionMode.set('disconnected');
     this._peers.set(new Map());
     this._error.set(null);
+    this._tasks.set(new Map());
+    this._myStats.set({ tasksCompleted: 0, tasksInProgress: 0, totalTime: 0 });
   }
 }

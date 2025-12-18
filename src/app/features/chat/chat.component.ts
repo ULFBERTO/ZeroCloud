@@ -47,6 +47,7 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
   // GPU selection
   readonly availableGPUs = this.webllmService.availableGPUs;
   readonly selectedGPU = this.webllmService.selectedGPU;
+  readonly showGPUSelector = signal(false);
 
   readonly state = this.chatBackend.state;
   readonly currentResponse = this.chatBackend.currentResponse;
@@ -101,6 +102,11 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
 
   onGPUChange(gpuId: string): void {
     this.webllmService.selectGPU(gpuId);
+    this.showGPUSelector.set(false);
+  }
+
+  toggleGPUSelector(): void {
+    this.showGPUSelector.update(v => !v);
   }
 
   async clearCacheAndRetry(): Promise<void> {

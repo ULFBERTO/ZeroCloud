@@ -60,13 +60,16 @@
 
       @for (model of models(); track model.id) {
         <div
-          class="bg-gray-800 rounded-xl p-4 border-2 transition-all cursor-pointer"
+          class="bg-gray-800 rounded-xl p-4 border-2 transition-all"
           [class.border-blue-500]="selectedModelId() === model.id"
           [class.border-transparent]="selectedModelId() !== model.id"
+          [class.opacity-50]="isModelDisabled(model)"
+          [class.cursor-pointer]="!isModelDisabled(model)"
+          [class.cursor-not-allowed]="isModelDisabled(model)"
           (click)="selectModel(model.id)">
           <div class="flex items-start justify-between">
             <div class="flex-1">
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-2 flex-wrap">
                 <h3 class="font-semibold text-lg">{{ model.name }}</h3>
                 @if (model.isDownloaded) {
                   <span class="px-2 py-0.5 bg-green-600/20 text-green-400 text-xs rounded-full">
@@ -83,8 +86,18 @@
                     Seleccionado
                   </span>
                 }
+                @if (isModelDisabled(model)) {
+                  <span class="px-2 py-0.5 bg-red-600/20 text-red-400 text-xs rounded-full">
+                    ⚠️ No compatible
+                  </span>
+                }
               </div>
               <p class="text-gray-400 text-sm mt-1">{{ model.description }}</p>
+              @if (isModelDisabled(model)) {
+                <p class="text-red-400 text-xs mt-1">
+                  Tu GPU no soporta float16. Usa un modelo compatible (f32).
+                </p>
+              }
               <div class="flex gap-4 mt-2 text-xs text-gray-500">
                 <span>📦 {{ model.size }}</span>
                 @if (model.vramRequired) {
@@ -94,7 +107,7 @@
             </div>
 
             <div class="flex gap-2">
-              @if (model.isDownloaded) {
+              @if (model.isDownloaded && !isModelDisabled(model)) {
                 <button
                   (click)="deleteModel(model); $event.stopPropagation()"
                   [disabled]="isDeleting() === model.id"

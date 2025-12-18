@@ -19,6 +19,13 @@ export class DashboardComponent {
   readonly selectedModelId = this.modelManager.selectedModelId;
   readonly isChecking = this.modelManager.isChecking;
   readonly downloadedModels = this.modelManager.downloadedModels;
+  readonly supportsF16 = this.webllm.supportsF16;
+
+  constructor() {
+    // Detectar GPUs para saber si soporta F16
+    this.webllm.detectAvailableGPUs();
+    this.loadStorageInfo();
+  }
 
   readonly storageInfo = signal<{ used: string; quota: string; percent: number } | null>(null);
   readonly showAddModal = signal(false);
@@ -33,9 +40,7 @@ export class DashboardComponent {
     return this.registryModels().filter((m) => m.toLowerCase().includes(filter)).slice(0, 50);
   });
 
-  constructor() {
-    this.loadStorageInfo();
-  }
+
 
   async loadStorageInfo(): Promise<void> {
     const info = await this.modelManager.getStorageUsage();
@@ -58,7 +63,16 @@ export class DashboardComponent {
 
 
   selectModel(modelId: string): void {
+    // No permitir seleccionar modelos F16 si no hay soporte
+    const model = this.models().find(m => m.id === modelId);
+    if (model?.requiresF16 && !this.supportsF16()) {
+      return;
+    }
     this.modelManager.selectModel(modelId);
+  }
+
+  isModelDisabled(model: ModelInfo): boolean {
+    return !!model.requiresF16 && !this.supportsF16();
   }
 
   async deleteModel(model: ModelInfo): Promise<void> {

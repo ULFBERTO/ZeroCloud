@@ -15,9 +15,12 @@ export interface GPUInfo {
   id: string;
   name: string;
   powerPreference: 'high-performance' | 'low-power';
+  supportsF16?: boolean;
+  vendor?: string;
 }
 
 const GPU_PREFERENCE_KEY = 'webllm_gpu_preference';
+const F16_SUPPORT_KEY = 'webllm_f16_support';
 
 @Injectable({ providedIn: 'root' })
 export class WebLLMService extends ChatBackendInterface {
@@ -39,15 +42,21 @@ export class WebLLMService extends ChatBackendInterface {
   private readonly _selectedGPU = signal<string>(
     localStorage.getItem(GPU_PREFERENCE_KEY) || 'high-performance'
   );
+  private readonly _supportsF16 = signal<boolean>(
+    localStorage.getItem(F16_SUPPORT_KEY) !== 'false'
+  );
 
   readonly availableGPUs = this._availableGPUs.asReadonly();
   readonly selectedGPU = this._selectedGPU.asReadonly();
+  readonly supportsF16 = this._supportsF16.asReadonly();
 
   readonly state = this._state.asReadonly();
   readonly currentResponse = this._currentResponse.asReadonly();
 
   async detectAvailableGPUs(): Promise<GPUInfo[]> {
     interface GPUAdapterLike {
+      features?: Set<string>;
+      info?: { vendor?: string; architecture?: string; device?: string };
       requestAdapterInfo?: () => Promise<{ vendor?: string; architecture?: string; device?: string }>;
     }
 
@@ -61,15 +70,37 @@ export class WebLLMService extends ChatBackendInterface {
 
     const gpus: GPUInfo[] = [];
 
+    const getGPUInfo = async (adapter: GPUAdapterLike): Promise<{ name: string; vendor: string; supportsF16: boolean }> => {
+      let info = adapter.info;
+      if (!info && adapter.requestAdapterInfo) {
+        info = await adapter.requestAdapterInfo();
+      }
+      const vendor = info?.vendor?.toLowerCase() || '';
+      const name = info
+        ? `${info.vendor || ''} ${info.architecture || info.device || ''}`.trim()
+        : '';
+      
+      // Detectar soporte F16 - Intel Gen9 y anteriores no lo soportan bien
+      const isIntel = vendor.includes('intel');
+      const isOldIntel = isIntel && (info?.architecture?.includes('gen-9') || info?.architecture?.includes('gen-8'));
+      const hasF16Feature = adapter.features?.has('shader-f16') ?? false;
+      const supportsF16 = !isOldIntel && (hasF16Feature || !isIntel);
+
+      return { name: name || 'GPU', vendor, supportsF16 };
+    };
+
     // Intentar obtener GPU de alto rendimiento (dedicada - NVIDIA/AMD)
     try {
       const highPerfAdapter = await nav.gpu.requestAdapter({ powerPreference: 'high-performance' });
       if (highPerfAdapter) {
-        const info = await highPerfAdapter.requestAdapterInfo?.();
-        const name = info
-          ? `${info.vendor || ''} ${info.architecture || info.device || ''}`.trim() || 'GPU Dedicada'
-          : 'GPU Dedicada';
-        gpus.push({ id: 'high-performance', name, powerPreference: 'high-performance' });
+        const { name, vendor, supportsF16 } = await getGPUInfo(highPerfAdapter);
+        gpus.push({
+          id: 'high-performance',
+          name: name || 'GPU Dedicada',
+          powerPreference: 'high-performance',
+          supportsF16,
+          vendor,
+        });
       }
     } catch {}
 
@@ -77,24 +108,42 @@ export class WebLLMService extends ChatBackendInterface {
     try {
       const lowPowerAdapter = await nav.gpu.requestAdapter({ powerPreference: 'low-power' });
       if (lowPowerAdapter) {
-        const info = await lowPowerAdapter.requestAdapterInfo?.();
-        const name = info
-          ? `${info.vendor || ''} ${info.architecture || info.device || ''}`.trim() || 'GPU Integrada'
-          : 'GPU Integrada';
+        const { name, vendor, supportsF16 } = await getGPUInfo(lowPowerAdapter);
         // Solo agregar si es diferente a la de alto rendimiento
         if (gpus.length === 0 || gpus[0].name !== name) {
-          gpus.push({ id: 'low-power', name, powerPreference: 'low-power' });
+          gpus.push({
+            id: 'low-power',
+            name: name || 'GPU Integrada',
+            powerPreference: 'low-power',
+            supportsF16,
+            vendor,
+          });
         }
       }
     } catch {}
 
     this._availableGPUs.set(gpus);
+
+    // Actualizar soporte F16 basado en GPU seleccionada
+    const selectedGpu = gpus.find(g => g.id === this._selectedGPU()) || gpus[0];
+    if (selectedGpu) {
+      this._supportsF16.set(selectedGpu.supportsF16 ?? true);
+      localStorage.setItem(F16_SUPPORT_KEY, String(selectedGpu.supportsF16 ?? true));
+    }
+
     return gpus;
   }
 
   selectGPU(gpuId: string): void {
     this._selectedGPU.set(gpuId);
     localStorage.setItem(GPU_PREFERENCE_KEY, gpuId);
+
+    // Actualizar soporte F16 basado en GPU seleccionada
+    const selectedGpu = this._availableGPUs().find(g => g.id === gpuId);
+    if (selectedGpu) {
+      this._supportsF16.set(selectedGpu.supportsF16 ?? true);
+      localStorage.setItem(F16_SUPPORT_KEY, String(selectedGpu.supportsF16 ?? true));
+    }
   }
 
   async checkWebGPUSupport(): Promise<{ supported: boolean; error?: string; adapterInfo?: string }> {
