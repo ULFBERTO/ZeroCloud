@@ -167,7 +167,20 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
 
     try {
       const history = this.messages().filter((m) => m.role !== 'system');
-      const response = await this.chatBackend.sendMessage(content, history.slice(0, -1));
+      
+      // Si hay peers conectados y soy el host, distribuir la tarea
+      const isHost = this.p2pSync.connectionMode() === 'hosting';
+      const hasPeers = this.p2pSync.connectedPeers().length > 0;
+      
+      let response: string;
+      
+      if (isHost && hasPeers) {
+        // Distribuir tarea a los peers
+        response = await this.sendDistributedMessage(content, history.slice(0, -1));
+      } else {
+        // Procesar localmente
+        response = await this.chatBackend.sendMessage(content, history.slice(0, -1));
+      }
 
       const assistantMessage: ChatMessage = {
         role: 'assistant',
@@ -185,6 +198,32 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
     } catch (error) {
       console.error('Error sending message:', error);
     }
+  }
+
+  private async sendDistributedMessage(content: string, history: ChatMessage[]): Promise<string> {
+    return new Promise((resolve) => {
+      // Enviar tarea a los peers
+      const taskId = this.p2pSync.sendInferenceTask(content);
+      
+      // Escuchar resultado
+      const resultHandler = (event: Event) => {
+        const detail = (event as CustomEvent).detail;
+        if (detail.taskId === taskId) {
+          window.removeEventListener('p2p-inference-result', resultHandler);
+          resolve(detail.result);
+        }
+      };
+      
+      window.addEventListener('p2p-inference-result', resultHandler);
+      
+      // Timeout de 60 segundos - si no hay respuesta, procesar localmente
+      setTimeout(async () => {
+        window.removeEventListener('p2p-inference-result', resultHandler);
+        console.log('P2P timeout, processing locally...');
+        const localResponse = await this.chatBackend.sendMessage(content, history);
+        resolve(localResponse);
+      }, 60000);
+    });
   }
 
   stopGeneration(): void {

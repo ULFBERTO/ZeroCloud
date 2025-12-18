@@ -296,7 +296,7 @@
       <div class="p-4 bg-gray-800 border-t border-gray-700">
         <div class="flex items-end gap-3 max-w-4xl mx-auto relative">
           <!-- GPU Selector Button -->
-          @if (availableGPUs().length > 1) {
+          @if (availableGPUs().length > 0) {
             <div class="relative">
               <button
                 (click)="toggleGPUSelector()"
@@ -307,9 +307,9 @@
               
               <!-- GPU Dropdown -->
               @if (showGPUSelector()) {
-                <div class="absolute bottom-full left-0 mb-2 w-48 bg-gray-700 rounded-xl shadow-lg border border-gray-600 overflow-hidden z-10">
+                <div class="absolute bottom-full left-0 mb-2 w-56 bg-gray-700 rounded-xl shadow-lg border border-gray-600 overflow-hidden z-10">
                   <div class="p-2 border-b border-gray-600 text-xs text-gray-400">
-                    Seleccionar GPU
+                    GPU en uso
                   </div>
                   @for (gpu of availableGPUs(); track gpu.id) {
                     <button
@@ -323,6 +323,11 @@
                       }
                       <span class="truncate">{{ gpu.name }}</span>
                     </button>
+                  }
+                  @if (availableGPUs().length === 1) {
+                    <div class="p-2 border-t border-gray-600 text-xs text-gray-500">
+                      Solo se detectó 1 GPU
+                    </div>
                   }
                 </div>
               }
