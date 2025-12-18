@@ -31,33 +31,69 @@ export class WebLLMService extends ChatBackendInterface {
   readonly state = this._state.asReadonly();
   readonly currentResponse = this._currentResponse.asReadonly();
 
-  async isWebGPUSupported(): Promise<boolean> {
-    const nav = navigator as Navigator & { gpu?: { requestAdapter: () => Promise<unknown | null> } };
-    if (!nav.gpu) return false;
-    try {
-      const adapter = await nav.gpu.requestAdapter();
-      return adapter !== null;
-    } catch {
-      return false;
+  async checkWebGPUSupport(): Promise<{ supported: boolean; error?: string; adapterInfo?: string }> {
+    interface GPUAdapterLike {
+      requestAdapterInfo?: () => Promise<{ vendor?: string; architecture?: string }>;
     }
+    
+    const nav = navigator as Navigator & { 
+      gpu?: { 
+        requestAdapter: (options?: { powerPreference?: string }) => Promise<GPUAdapterLike | null> 
+      } 
+    };
+    
+    if (!nav.gpu) {
+      return { 
+        supported: false, 
+        error: 'Tu navegador no soporta WebGPU. Usa Chrome 113+ (Android/PC) o Edge 113+.' 
+      };
+    }
+
+    try {
+      // Intentar obtener cualquier GPU disponible (móvil o PC)
+      const adapter = await nav.gpu.requestAdapter();
+
+      if (!adapter) {
+        return { 
+          supported: false, 
+          error: 'No se encontró una GPU compatible con WebGPU.' 
+        };
+      }
+
+      // Obtener info del adaptador para mostrar al usuario
+      const info = await adapter.requestAdapterInfo?.();
+      const adapterInfo = info ? `${info.vendor || 'GPU'} ${info.architecture || ''}`.trim() : 'GPU detectada';
+
+      return { supported: true, adapterInfo };
+    } catch {
+      return { 
+        supported: false, 
+        error: 'Error al acceder a la GPU.' 
+      };
+    }
+  }
+
+  async isWebGPUSupported(): Promise<boolean> {
+    const result = await this.checkWebGPUSupport();
+    return result.supported;
   }
 
 
   async initialize(): Promise<void> {
-    const supported = await this.isWebGPUSupported();
-    if (!supported) {
+    const gpuCheck = await this.checkWebGPUSupport();
+    if (!gpuCheck.supported) {
       this._state.update((s) => ({
         ...s,
-        error: 'WebGPU no está soportado en este navegador. Usa Chrome/Edge 113+ con GPU compatible.',
+        error: gpuCheck.error || 'WebGPU no disponible',
       }));
-      throw new Error('WebGPU not supported');
+      throw new Error(gpuCheck.error);
     }
 
     this._state.update((s) => ({
       ...s,
       isLoading: true,
       error: null,
-      loadingProgress: { progress: 0, text: 'Iniciando...' },
+      loadingProgress: { progress: 0, text: `Iniciando con ${gpuCheck.adapterInfo}...` },
     }));
 
     try {
@@ -87,15 +123,37 @@ export class WebLLMService extends ChatBackendInterface {
         loadingProgress: null,
       }));
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Error desconocido';
+      const errorMessage = this.parseModelError(error);
       this._state.update((s) => ({
         ...s,
         isLoading: false,
-        error: `Error al cargar el modelo: ${message}`,
+        error: errorMessage,
         loadingProgress: null,
       }));
       throw error;
     }
+  }
+
+  private parseModelError(error: unknown): string {
+    const message = error instanceof Error ? error.message : String(error);
+    
+    // Errores de shader/GPU
+    if (message.includes('ShaderModule') || message.includes('shader')) {
+      return 'Tu GPU no es compatible con este modelo. Prueba con un modelo más pequeño como "SmolLM2 1.7B" o actualiza los drivers de tu tarjeta gráfica.';
+    }
+    
+    // Errores de memoria
+    if (message.includes('out of memory') || message.includes('OOM') || message.includes('allocation')) {
+      return 'No hay suficiente memoria en la GPU. Cierra otras pestañas o aplicaciones y prueba con un modelo más pequeño.';
+    }
+    
+    // Errores de red
+    if (message.includes('fetch') || message.includes('network') || message.includes('Failed to load')) {
+      return 'Error de conexión al descargar el modelo. Verifica tu conexión a internet e intenta de nuevo.';
+    }
+    
+    // Error genérico pero amigable
+    return `No se pudo cargar el modelo. ${message.length < 100 ? message : 'Intenta con un modelo más pequeño o reinicia el navegador.'}`;
   }
 
 
