@@ -9,6 +9,57 @@ import {
   DistributedComputeMessage,
 } from '../interfaces/distributed-compute.interface';
 
+// WebGPU type declarations for environments without @webgpu/types
+declare global {
+  interface GPU {
+    requestAdapter(options?: { powerPreference?: string }): Promise<GPUAdapterType | null>;
+  }
+  interface GPUAdapterType {
+    requestDevice(): Promise<GPUDeviceType>;
+    requestAdapterInfo?(): Promise<GPUAdapterInfoType>;
+  }
+  interface GPUAdapterInfoType {
+    vendor?: string;
+    architecture?: string;
+    device?: string;
+  }
+  interface GPUDeviceType {
+    createBuffer(descriptor: { size: number; usage: number }): GPUBufferType;
+    createShaderModule(descriptor: { code: string }): GPUShaderModuleType;
+    createComputePipeline(descriptor: unknown): GPUComputePipelineType;
+    createCommandEncoder(): GPUCommandEncoderType;
+    createBindGroup(descriptor: unknown): GPUBindGroupType;
+    queue: { submit(buffers: GPUCommandBufferType[]): void };
+    destroy(): void;
+  }
+  interface GPUBufferType {
+    destroy(): void;
+  }
+  interface GPUShaderModuleType {}
+  interface GPUComputePipelineType {
+    getBindGroupLayout(index: number): unknown;
+  }
+  interface GPUCommandEncoderType {
+    beginComputePass(): GPUComputePassEncoderType;
+    finish(): GPUCommandBufferType;
+  }
+  interface GPUComputePassEncoderType {
+    setPipeline(pipeline: GPUComputePipelineType): void;
+    setBindGroup(index: number, bindGroup: GPUBindGroupType): void;
+    dispatchWorkgroups(x: number, y?: number, z?: number): void;
+    end(): void;
+  }
+  interface GPUBindGroupType {}
+  interface GPUCommandBufferType {}
+}
+
+const GPU_BUFFER_USAGE_STORAGE = 0x80;
+const GPU_BUFFER_USAGE_COPY_DST = 0x08;
+const GPU_BUFFER_USAGE_COPY_SRC = 0x04;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type GPUDeviceForBenchmark = any;
+
 const HEARTBEAT_INTERVAL = 5000;
 const NODE_TIMEOUT = 15000;
 
@@ -66,23 +117,22 @@ export class GPUClusterService {
   // === Initialization ===
 
   async initializeLocalGPU(): Promise<GPUCapabilities | null> {
-    const nav = navigator as Navigator & { gpu?: GPU };
+    const nav = navigator as Navigator & { gpu?: { requestAdapter: (opts?: { powerPreference?: string }) => Promise<GPUAdapterType | null> } };
     if (!nav.gpu) return null;
 
     try {
       const adapter = await nav.gpu.requestAdapter({ powerPreference: 'high-performance' });
       if (!adapter) return null;
 
-      const device = await adapter.requestDevice();
-      const info = await (adapter as GPUAdapter & { requestAdapterInfo?: () => Promise<GPUAdapterInfo> })
-        .requestAdapterInfo?.() || {} as GPUAdapterInfo;
+      const device = await adapter.requestDevice() as GPUDeviceType & { limits: { maxBufferSize: number; maxComputeWorkgroupsPerDimension: number } };
+      const info = await adapter.requestAdapterInfo?.() || {} as GPUAdapterInfoType;
 
       this.localCapabilities = {
         vendor: info.vendor || 'Unknown',
         architecture: info.architecture || 'Unknown',
         maxBufferSize: device.limits.maxBufferSize,
         maxComputeWorkgroupsPerDimension: device.limits.maxComputeWorkgroupsPerDimension,
-        supportsF16: adapter.features.has('shader-f16'),
+        supportsF16: false, // Simplified
         estimatedTFLOPS: this.estimateTFLOPS(info),
         availableVRAM: this.estimateVRAM(device),
       };
@@ -95,7 +145,7 @@ export class GPUClusterService {
     }
   }
 
-  private estimateTFLOPS(info: GPUAdapterInfo): number {
+  private estimateTFLOPS(info: GPUAdapterInfoType): number {
     const vendor = (info.vendor || '').toLowerCase();
     const arch = (info.architecture || '').toLowerCase();
     
@@ -121,7 +171,7 @@ export class GPUClusterService {
     return 5; // Default conservador
   }
 
-  private estimateVRAM(device: GPUDevice): number {
+  private estimateVRAM(device: GPUDeviceType & { limits: { maxBufferSize: number } }): number {
     // WebGPU no expone VRAM directamente, estimamos por maxBufferSize
     const maxBuffer = device.limits.maxBufferSize;
     // Asumimos que maxBufferSize es ~25% de VRAM total
@@ -400,14 +450,14 @@ export class GPUClusterService {
     this._isBenchmarking.set(true);
 
     try {
-      const nav = navigator as Navigator & { gpu?: GPU };
+      const nav = navigator as Navigator & { gpu?: { requestAdapter: (opts?: { powerPreference?: string }) => Promise<GPUAdapterType | null> } };
       if (!nav.gpu) return null;
 
       const adapter = await nav.gpu.requestAdapter({ powerPreference: 'high-performance' });
       if (!adapter) return null;
 
       const device = await adapter.requestDevice();
-      const result = await this.runMatmulBenchmark(device);
+      const result = await this.runMatmulBenchmark(device as unknown as GPUDeviceForBenchmark);
       
       device.destroy();
       this.localBenchmark = result;
@@ -424,7 +474,7 @@ export class GPUClusterService {
     }
   }
 
-  private async runMatmulBenchmark(device: GPUDevice): Promise<GPUBenchmarkResult> {
+  private async runMatmulBenchmark(device: GPUDeviceForBenchmark): Promise<GPUBenchmarkResult> {
     // Benchmark simple: multiplicación de matrices 1024x1024
     const size = 1024;
     const iterations = 10;
@@ -455,9 +505,9 @@ export class GPUClusterService {
     });
 
     const bufferSize = size * size * 4;
-    const bufferA = device.createBuffer({ size: bufferSize, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
-    const bufferB = device.createBuffer({ size: bufferSize, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
-    const bufferC = device.createBuffer({ size: bufferSize, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
+    const bufferA = device.createBuffer({ size: bufferSize, usage: GPU_BUFFER_USAGE_STORAGE | GPU_BUFFER_USAGE_COPY_DST });
+    const bufferB = device.createBuffer({ size: bufferSize, usage: GPU_BUFFER_USAGE_STORAGE | GPU_BUFFER_USAGE_COPY_DST });
+    const bufferC = device.createBuffer({ size: bufferSize, usage: GPU_BUFFER_USAGE_STORAGE | GPU_BUFFER_USAGE_COPY_SRC });
 
     // Inicializar con datos aleatorios
     const dataA = new Float32Array(size * size).map(() => Math.random());

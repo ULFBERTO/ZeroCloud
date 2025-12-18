@@ -116,7 +116,7 @@ export class TFJSModelService {
 
       // Parsear embeddings (primeros vocab_size * d_model floats)
       const allWeights = new Float32Array(weightsBuffer);
-      const embSize = this.modelConfig.vocab_size * this.modelConfig.d_model;
+      const embSize = this.modelConfig!.vocab_size * this.modelConfig!.d_model;
       this.embeddings = allWeights.slice(0, embSize);
       
       // Output weights (últimos vocab_size * d_model floats aproximadamente)
@@ -135,7 +135,7 @@ export class TFJSModelService {
       });
 
       console.log('✅ Modelo cargado correctamente');
-      console.log(`   Vocabulario: ${Object.keys(this.vocab.char2idx).length} caracteres`);
+      console.log(`   Vocabulario: ${Object.keys(this.vocab!.char2idx).length} caracteres`);
       console.log(`   Embeddings: ${this.embeddings.length} valores`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Error desconocido';
