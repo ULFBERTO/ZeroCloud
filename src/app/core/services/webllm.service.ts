@@ -56,61 +56,73 @@ export class WebLLMService extends ChatBackendInterface {
   async detectAvailableGPUs(): Promise<GPUInfo[]> {
     interface GPUAdapterLike {
       features?: { has: (key: string) => boolean };
-      info?: { vendor?: string; architecture?: string; device?: string };
-      requestAdapterInfo?: () => Promise<{ vendor?: string; architecture?: string; device?: string }>;
+      info?: { vendor?: string; architecture?: string; device?: string; description?: string };
+      requestAdapterInfo?: () => Promise<{ vendor?: string; architecture?: string; device?: string; description?: string }>;
     }
 
     const nav = navigator as Navigator & {
       gpu?: {
-        requestAdapter: (options?: { powerPreference?: string }) => Promise<GPUAdapterLike | null>;
+        requestAdapter: (options?: { powerPreference?: string; forceFallbackAdapter?: boolean }) => Promise<GPUAdapterLike | null>;
       };
     };
 
     if (!nav.gpu) return [];
 
     const gpus: GPUInfo[] = [];
+    const seenGPUs = new Set<string>();
 
-    const getGPUInfo = async (adapter: GPUAdapterLike): Promise<{ name: string; vendor: string; supportsF16: boolean }> => {
+    const getGPUInfo = async (adapter: GPUAdapterLike): Promise<{ name: string; vendor: string; supportsF16: boolean; uniqueId: string }> => {
       let info = adapter.info;
       if (!info && adapter.requestAdapterInfo) {
         info = await adapter.requestAdapterInfo();
       }
       const vendor = info?.vendor?.toLowerCase() || '';
+      const architecture = info?.architecture || '';
+      const device = info?.device || info?.description || '';
       const name = info
-        ? `${info.vendor || ''} ${info.architecture || info.device || ''}`.trim()
+        ? `${info.vendor || ''} ${architecture || device}`.trim()
         : '';
+      
+      // Crear ID único basado en vendor + architecture/device
+      const uniqueId = `${vendor}-${architecture}-${device}`.toLowerCase();
       
       // Detectar soporte F16 - Intel Gen9 y anteriores no lo soportan bien
       const isIntel = vendor.includes('intel');
-      const isOldIntel = isIntel && (info?.architecture?.includes('gen-9') || info?.architecture?.includes('gen-8'));
+      const isOldIntel = isIntel && (architecture.includes('gen-9') || architecture.includes('gen-8') || architecture.includes('gen9') || architecture.includes('gen8'));
       const hasF16Feature = adapter.features?.has('shader-f16') ?? false;
       const supportsF16 = !isOldIntel && (hasF16Feature || !isIntel);
 
-      return { name: name || 'GPU', vendor, supportsF16 };
+      return { name: name || 'GPU', vendor, supportsF16, uniqueId };
     };
 
     // Intentar obtener GPU de alto rendimiento (dedicada - NVIDIA/AMD)
     try {
       const highPerfAdapter = await nav.gpu.requestAdapter({ powerPreference: 'high-performance' });
       if (highPerfAdapter) {
-        const { name, vendor, supportsF16 } = await getGPUInfo(highPerfAdapter as GPUAdapterLike);
-        gpus.push({
-          id: 'high-performance',
-          name: name || 'GPU Dedicada',
-          powerPreference: 'high-performance',
-          supportsF16,
-          vendor,
-        });
+        const { name, vendor, supportsF16, uniqueId } = await getGPUInfo(highPerfAdapter as GPUAdapterLike);
+        if (!seenGPUs.has(uniqueId)) {
+          seenGPUs.add(uniqueId);
+          gpus.push({
+            id: 'high-performance',
+            name: name || 'GPU Dedicada',
+            powerPreference: 'high-performance',
+            supportsF16,
+            vendor,
+          });
+        }
       }
-    } catch {}
+    } catch (e) {
+      console.warn('Error detecting high-performance GPU:', e);
+    }
 
     // Intentar obtener GPU de bajo consumo (integrada - Intel)
     try {
       const lowPowerAdapter = await nav.gpu.requestAdapter({ powerPreference: 'low-power' });
       if (lowPowerAdapter) {
-        const { name, vendor, supportsF16 } = await getGPUInfo(lowPowerAdapter as GPUAdapterLike);
-        // Solo agregar si es diferente a la de alto rendimiento
-        if (gpus.length === 0 || gpus[0].name !== name) {
+        const { name, vendor, supportsF16, uniqueId } = await getGPUInfo(lowPowerAdapter as GPUAdapterLike);
+        // Solo agregar si es diferente
+        if (!seenGPUs.has(uniqueId)) {
+          seenGPUs.add(uniqueId);
           gpus.push({
             id: 'low-power',
             name: name || 'GPU Integrada',
@@ -120,9 +132,34 @@ export class WebLLMService extends ChatBackendInterface {
           });
         }
       }
-    } catch {}
+    } catch (e) {
+      console.warn('Error detecting low-power GPU:', e);
+    }
+
+    // Intentar obtener adaptador por defecto (sin preferencia)
+    try {
+      const defaultAdapter = await nav.gpu.requestAdapter();
+      if (defaultAdapter) {
+        const { name, vendor, supportsF16, uniqueId } = await getGPUInfo(defaultAdapter as GPUAdapterLike);
+        if (!seenGPUs.has(uniqueId)) {
+          seenGPUs.add(uniqueId);
+          gpus.push({
+            id: 'default',
+            name: name || 'GPU por defecto',
+            powerPreference: 'high-performance',
+            supportsF16,
+            vendor,
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Error detecting default GPU:', e);
+    }
 
     this._availableGPUs.set(gpus);
+
+    // Log para debug
+    console.log('GPUs detectadas:', gpus.map(g => `${g.name} (${g.id})`));
 
     // Actualizar soporte F16 basado en GPU seleccionada
     const selectedGpu = gpus.find(g => g.id === this._selectedGPU()) || gpus[0];
@@ -214,16 +251,24 @@ export class WebLLMService extends ChatBackendInterface {
     }));
 
     try {
-      this.engine = new MLCEngine();
-
-      this.engine.setInitProgressCallback((report: InitProgressReport) => {
-        this._state.update((s) => ({
-          ...s,
-          loadingProgress: {
-            progress: Math.round(report.progress * 100),
-            text: report.text,
-          },
-        }));
+      // Log de GPU seleccionada
+      console.log(`🖥️ Inicializando con GPU: ${gpuCheck.adapterInfo}`);
+      
+      // Crear engine - web-llm usa la GPU por defecto del sistema
+      this.engine = new MLCEngine({
+        initProgressCallback: (report: InitProgressReport) => {
+          this._state.update((s) => ({
+            ...s,
+            loadingProgress: {
+              progress: Math.round(report.progress * 100),
+              text: report.text,
+            },
+          }));
+          // Log de progreso para debug
+          if (report.progress === 1) {
+            console.log('✅ Modelo cargado en GPU');
+          }
+        },
       });
 
       const modelId = this.modelManager.selectedModelId();
@@ -250,6 +295,8 @@ export class WebLLMService extends ChatBackendInterface {
       throw error;
     }
   }
+
+
 
   private parseModelError(error: unknown): string {
     const message = error instanceof Error ? error.message : String(error);

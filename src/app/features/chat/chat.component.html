@@ -343,8 +343,9 @@
                     </button>
                   }
                   @if (availableGPUs().length === 1) {
-                    <div class="p-2 border-t border-gray-600 text-xs text-gray-500">
-                      Solo se detectó 1 GPU
+                    <div class="p-2 border-t border-gray-600 text-xs text-gray-500 space-y-1">
+                      <p>Solo se detectó 1 GPU</p>
+                      <p class="text-gray-600">💡 Si tienes otra GPU (ej: NVIDIA), verifica en la configuración de Windows que Chrome/Edge use la GPU dedicada.</p>
                     </div>
                   }
                 </div>
