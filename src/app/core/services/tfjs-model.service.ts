@@ -175,6 +175,8 @@ export class TFJSModelService {
         progress: 0,
       });
       console.error('❌ Error cargando modelo:', error);
+      // Show user-friendly error or use fallback
+      this._state.update((s) => ({ ...s, error: 'No se pudo cargar modelo. Por favor, inténtelo de nuevo más tarde.' }));
     }
   }
 
