@@ -284,3 +284,142 @@ export class TFJSModelService {
     this._state.set({ isLoading: false, isReady: false, error: null, progress: 0 });
   }
 }
+
+// Fix the URL typo in CORS_PROXY
+const CORS_PROXY = 'https://corsproxy.io/?';
+
+// Fix the URL typo in DEFAULT_MODELS
+const DEFAULT_MODELS: TFJSModelConfig[] = [
+  {
+    repoId: 'ULFBERTO/OxideLLM_5M-tfjs',
+    name: 'OxideLLM_5M',
+    description: 'Modelo GPT entrenado con corpus de literatura española (~13M caracteres)',
+    baseUrl: 'https://huggingface.co/ULFBERTO/OxideLLM_5M-tfjs/resolve/main',
+  },
+];
+
+// Add try/catch blocks around fetch/HTTP calls
+@Injectable({ providedIn: 'root' })
+export class TFJSModelService {
+  // ...
+
+  async loadModel(modelId?: string): Promise<void> {
+    // ...
+
+    try {
+      // ...
+
+      // 1. Cargar vocabulario
+      console.log('📚 Cargando vocabulario...');
+      const vocabResponse = await fetch(buildUrl('vocab.json'));
+      if (!vocabResponse.ok) {
+        console.error('vocab.json status:', vocabResponse.status, vocabResponse.statusText);
+        throw new Error(`No se pudo cargar vocab.json (${vocabResponse.status})`);
+      }
+      this.vocab = await vocabResponse.json();
+      this._state.update((s) => ({ ...s, progress: 30 }));
+
+      // ...
+
+      // 2. Cargar configuración del modelo
+      console.log('⚙️ Cargando configuración...');
+      const configResponse = await fetch(buildUrl('config.json'));
+      if (!configResponse.ok) {
+        console.error('config.json status:', configResponse.status, configResponse.statusText);
+        throw new Error(`No se pudo cargar config.json (${configResponse.status})`);
+      }
+      this.modelConfig = await configResponse.json();
+      this._state.update((s) => ({ ...s, progress: 50 }));
+
+      // ...
+
+      // 3. Cargar pesos (solo embeddings para generación simple)
+      console.log('🧠 Cargando pesos...');
+      const weightsResponse = await fetch(buildUrl('weights.bin'));
+      if (!weightsResponse.ok) {
+        console.error('weights.bin status:', weightsResponse.status, weightsResponse.statusText);
+        throw new Error(`No se pudo cargar weights.bin (${weightsResponse.status})`);
+      }
+      const weightsBuffer = await weightsResponse.arrayBuffer();
+      this._state.update((s) => ({ ...s, progress: 90 }));
+
+      // ...
+
+    } catch (error) {
+      // ...
+    }
+  }
+
+  // ...
+}
+
+// Add error handling for network errors
+@Injectable({ providedIn: 'root' })
+export class TFJSModelService {
+  // ...
+
+  async loadModel(modelId?: string): Promise<void> {
+    // ...
+
+    try {
+      // ...
+
+      // 1. Cargar vocabulario
+      console.log('📚 Cargando vocabulario...');
+      const vocabResponse = await fetch(buildUrl('vocab.json'));
+      if (!vocabResponse.ok) {
+        console.error('vocab.json status:', vocabResponse.status, vocabResponse.statusText);
+        throw new Error(`No se pudo cargar vocab.json (${vocabResponse.status})`);
+      }
+      this.vocab = await vocabResponse.json();
+      this._state.update((s) => ({ ...s, progress: 30 }));
+
+      // ...
+
+      // 2. Cargar configuración del modelo
+      console.log('⚙️ Cargando configuración...');
+      const configResponse = await fetch(buildUrl('config.json'));
+      if (!configResponse.ok) {
+        console.error('config.json status:', configResponse.status, configResponse.statusText);
+        throw new Error(`No se pudo cargar config.json (${configResponse.status})`);
+      }
+      this.modelConfig = await configResponse.json();
+      this._state.update((s) => ({ ...s, progress: 50 }));
+
+      // ...
+
+      // 3. Cargar pesos (solo embeddings para generación simple)
+      console.log('🧠 Cargando pesos...');
+      const weightsResponse = await fetch(buildUrl('weights.bin'));
+      if (!weightsResponse.ok) {
+        console.error('weights.bin status:', weightsResponse.status, weightsResponse.statusText);
+        throw new Error(`No se pudo cargar weights.bin (${weightsResponse.status})`);
+      }
+      const weightsBuffer = await weightsResponse.arrayBuffer();
+      this._state.update((s) => ({ ...s, progress: 90 }));
+
+      // ...
+
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error('❌ Error cargando modelo:', error.message);
+        this._state.set({
+          isLoading: false,
+          isReady: false,
+          error: `Error al cargar modelo: ${error.message}`,
+          progress: 0,
+        });
+      } else {
+        console.error('❌ Error cargando modelo:', error);
+        this._state.set({
+          isLoading: false,
+          isReady: false,
+          error: 'Error desconocido',
+          progress: 0,
+        });
+      }
+    }
+  }
+
+  // ...
+}
