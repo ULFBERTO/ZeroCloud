@@ -71,7 +71,7 @@ import { TFJSModelService } from '../../core/services/tfjs-model.service';
         }
 
         <!-- Not Loaded State -->
-        @if (!state().isLoading && !state().isReady && !state().error) {
+        @if (!state().isLoading &&!state().isReady &&!state().error) {
           <div class="flex-1 flex items-center justify-center">
             <div class="text-center max-w-md">
               <div class="text-6xl mb-4">🤖</div>
@@ -191,11 +191,16 @@ export class TFJSChatComponent {
   readonly isGenerating = signal(false);
 
   readonly canGenerate = computed(
-    () => this.state().isReady && !this.isGenerating() && this.prompt().trim().length > 0
+    () => this.state().isReady &&!this.isGenerating() && this.prompt().trim().length > 0
   );
 
   async loadModel(): Promise<void> {
-    await this.tfjsService.loadModel();
+    try {
+      await this.tfjsService.loadModel();
+    } catch (error) {
+      console.error('Error loading model:', error);
+      this.state.error = 'Error al cargar modelo. Por favor, inténtelo de nuevo.';
+    }
   }
 
   async generate(): Promise<void> {
@@ -203,13 +208,20 @@ export class TFJSChatComponent {
 
     this.isGenerating.set(true);
     try {
+      const response = await fetch('https://corsproxy.io/?https%3A%2F%2Fhuggingface.coc%2FULFBERTO%2FOxideLLM_5M-tfjs%2Fresolve%2Fmain%2Fvocab.json');
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+      const vocabJson = await response.json();
       await this.tfjsService.generate(
         this.prompt(),
         this.maxLength(),
-        this.temperature()
+        this.temperature(),
+        vocabJson
       );
     } catch (error) {
       console.error('Error generating:', error);
+      this.state.error = 'Error al generar texto. Por favor, inténtelo de nuevo.';
     } finally {
       this.isGenerating.set(false);
     }
