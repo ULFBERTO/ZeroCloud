@@ -120,7 +120,18 @@ export class TFJSModelService {
         console.error('vocab.json status:', vocabResponse.status, vocabResponse.statusText);
         throw new Error(`No se pudo cargar vocab.json (${vocabResponse.status})`);
       }
-      this.vocab = await vocabResponse.json();
+      try {
+        this.vocab = await vocabResponse.json();
+      } catch (error) {
+        console.error('Error parseando vocab.json:', error);
+        this._state.set({
+          isLoading: false,
+          isReady: false,
+          error: 'Error parseando vocab.json',
+          progress: 0,
+        });
+        return;
+      }
       this._state.update((s) => ({ ...s, progress: 30 }));
 
       // 2. Cargar configuración del modelo
@@ -130,7 +141,18 @@ export class TFJSModelService {
         console.error('config.json status:', configResponse.status, configResponse.statusText);
         throw new Error(`No se pudo cargar config.json (${configResponse.status})`);
       }
-      this.modelConfig = await configResponse.json();
+      try {
+        this.modelConfig = await configResponse.json();
+      } catch (error) {
+        console.error('Error parseando config.json:', error);
+        this._state.set({
+          isLoading: false,
+          isReady: false,
+          error: 'Error parseando config.json',
+          progress: 0,
+        });
+        return;
+      }
       this._state.update((s) => ({ ...s, progress: 50 }));
 
       // 3. Cargar pesos (solo embeddings para generación simple)
@@ -140,32 +162,43 @@ export class TFJSModelService {
         console.error('weights.bin status:', weightsResponse.status, weightsResponse.statusText);
         throw new Error(`No se pudo cargar weights.bin (${weightsResponse.status})`);
       }
-      const weightsBuffer = await weightsResponse.arrayBuffer();
-      this._state.update((s) => ({ ...s, progress: 90 }));
+      try {
+        const weightsBuffer = await weightsResponse.arrayBuffer();
+        this._state.update((s) => ({ ...s, progress: 90 }));
 
-      // Parsear embeddings (primeros vocab_size * d_model floats)
-      const allWeights = new Float32Array(weightsBuffer);
-      const embSize = this.modelConfig!.vocab_size * this.modelConfig!.d_model;
-      this.embeddings = allWeights.slice(0, embSize);
-      
-      // Output weights (últimos vocab_size * d_model floats aproximadamente)
-      const totalWeights = allWeights.length;
-      this.outputWeights = allWeights.slice(totalWeights - embSize);
+        // Parsear embeddings (primeros vocab_size * d_model floats)
+        const allWeights = new Float32Array(weightsBuffer);
+        const embSize = this.modelConfig!.vocab_size * this.modelConfig!.d_model;
+        this.embeddings = allWeights.slice(0, embSize);
+        
+        // Output weights (últimos vocab_size * d_model floats aproximadamente)
+        const totalWeights = allWeights.length;
+        this.outputWeights = allWeights.slice(totalWeights - embSize);
 
-      this.currentModelId = targetId;
-      this._selectedModelId.set(targetId);
-      localStorage.setItem(DEFAULT_MODEL_KEY, targetId);
+        this.currentModelId = targetId;
+        this._selectedModelId.set(targetId);
+        localStorage.setItem(DEFAULT_MODEL_KEY, targetId);
 
-      this._state.set({
-        isLoading: false,
-        isReady: true,
-        error: null,
-        progress: 100,
-      });
+        this._state.set({
+          isLoading: false,
+          isReady: true,
+          error: null,
+          progress: 100,
+        });
 
-      console.log('✅ Modelo cargado correctamente');
-      console.log(`   Vocabulario: ${Object.keys(this.vocab!.char2idx).length} caracteres`);
-      console.log(`   Embeddings: ${this.embeddings.length} valores`);
+        console.log('✅ Modelo cargado correctamente');
+        console.log(`   Vocabulario: ${Object.keys(this.vocab!.char2idx).length} caracteres`);
+        console.log(`   Embeddings: ${this.embeddings.length} valores`);
+      } catch (error) {
+        console.error('Error parseando weights.bin:', error);
+        this._state.set({
+          isLoading: false,
+          isReady: false,
+          error: 'Error parseando weights.bin',
+          progress: 0,
+        });
+        return;
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Error desconocido';
       this._state.set({
