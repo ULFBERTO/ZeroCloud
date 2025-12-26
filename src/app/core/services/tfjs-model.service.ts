@@ -92,7 +92,7 @@ export class TFJSModelService {
     }
 
     if (!modelConfig) {
-      this._state.update((s) => ({ ...s, error: 'No hay modelos disponibles' }));
+      this._state.update((s) => ({...s, error: 'No hay modelos disponibles' }));
       return;
     }
 
@@ -121,7 +121,7 @@ export class TFJSModelService {
         throw new Error(`No se pudo cargar vocab.json (${vocabResponse.status})`);
       }
       this.vocab = await vocabResponse.json();
-      this._state.update((s) => ({ ...s, progress: 30 }));
+      this._state.update((s) => ({...s, progress: 30 }));
 
       // 2. Cargar configuración del modelo
       console.log('⚙️ Cargando configuración...');
@@ -131,7 +131,7 @@ export class TFJSModelService {
         throw new Error(`No se pudo cargar config.json (${configResponse.status})`);
       }
       this.modelConfig = await configResponse.json();
-      this._state.update((s) => ({ ...s, progress: 50 }));
+      this._state.update((s) => ({...s, progress: 50 }));
 
       // 3. Cargar pesos (solo embeddings para generación simple)
       console.log('🧠 Cargando pesos...');
@@ -141,7 +141,7 @@ export class TFJSModelService {
         throw new Error(`No se pudo cargar weights.bin (${weightsResponse.status})`);
       }
       const weightsBuffer = await weightsResponse.arrayBuffer();
-      this._state.update((s) => ({ ...s, progress: 90 }));
+      this._state.update((s) => ({...s, progress: 90 }));
 
       // Parsear embeddings (primeros vocab_size * d_model floats)
       const allWeights = new Float32Array(weightsBuffer);
@@ -167,7 +167,7 @@ export class TFJSModelService {
       console.log(`   Vocabulario: ${Object.keys(this.vocab!.char2idx).length} caracteres`);
       console.log(`   Embeddings: ${this.embeddings.length} valores`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Error desconocido';
+      const message = error instanceof Error? error.message : 'Error desconocido';
       this._state.set({
         isLoading: false,
         isReady: false,
@@ -182,7 +182,7 @@ export class TFJSModelService {
    * Genera texto usando los embeddings del modelo
    */
   async generate(prompt: string, maxLength: number = 200, temperature: number = 0.7): Promise<string> {
-    if (!this.vocab || !this.embeddings || !this.modelConfig) {
+    if (!this.vocab ||!this.embeddings ||!this.modelConfig) {
       throw new Error('Modelo no cargado');
     }
 
@@ -202,7 +202,7 @@ export class TFJSModelService {
       
       for (const char of context) {
         const idx = char2idx[char];
-        if (idx !== undefined) {
+        if (idx!== undefined) {
           for (let j = 0; j < d_model; j++) {
             contextEmbedding[j] += this.embeddings[idx * d_model + j];
           }
