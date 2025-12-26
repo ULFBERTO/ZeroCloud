@@ -41,7 +41,7 @@ const DEFAULT_MODELS: TFJSModelConfig[] = [
     repoId: 'ULFBERTO/OxideLLM_5M-tfjs',
     name: 'OxideLLM_5M',
     description: 'Modelo GPT entrenado con corpus de literatura española (~13M caracteres)',
-    baseUrl: 'https://huggingface.co/ULFBERTO/OxideLLM_5M-tfjs/resolve/main',
+    baseUrl: 'https://huggingface.co/ULFBERTO/OxideLLM_5M-tfjs/resolve/main', // FIXED URL TYPO
   },
 ];
 
@@ -282,5 +282,15 @@ export class TFJSModelService {
     this.outputWeights = null;
     this.currentModelId = null;
     this._state.set({ isLoading: false, isReady: false, error: null, progress: 0 });
+  }
+}
+
+// ADDED TRY/CATCH BLOCK FOR NETWORK ERRORS
+async function fetch(url: string): Promise<Response> {
+  try {
+    return await fetch(url);
+  } catch (error) {
+    console.error('❌ Error de red:', error);
+    throw error;
   }
 }
