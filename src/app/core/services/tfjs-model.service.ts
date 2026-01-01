@@ -32,8 +32,8 @@ export interface ModelConfig {
 const DEFAULT_MODEL_KEY = 'tfjs_default_model';
 
 // Proxy CORS para evitar restricciones de Hugging Face
-// Opciones: corsproxy.io, allorigins.win, o tu propio proxy
-const CORS_PROXY = 'https://corsproxy.io/?';
+// Opciones: cors-anywhere, allorigins, o servir archivos localmente
+const CORS_PROXY = ''; // Deshabilitado - usar CDN de HF directamente
 
 // Modelo principal - OxideLLM_5M (entrenado con corpus español completo)
 const DEFAULT_MODELS: TFJSModelConfig[] = [
@@ -41,6 +41,7 @@ const DEFAULT_MODELS: TFJSModelConfig[] = [
     repoId: 'ULFBERTO/OxideLLM_5M-tfjs',
     name: 'OxideLLM_5M',
     description: 'Modelo GPT entrenado con corpus de literatura española (~13M caracteres)',
+    // Usar CDN de Hugging Face que tiene CORS habilitado
     baseUrl: 'https://huggingface.co/ULFBERTO/OxideLLM_5M-tfjs/resolve/main',
   },
 ];
@@ -110,8 +111,8 @@ export class TFJSModelService {
     try {
       const baseUrl = modelConfig.baseUrl;
       
-      // Helper para construir URL con proxy CORS
-      const buildUrl = (file: string) => `${CORS_PROXY}${encodeURIComponent(`${baseUrl}/${file}`)}`;
+      // Helper para construir URL (sin proxy - HF CDN tiene CORS habilitado)
+      const buildUrl = (file: string) => `${baseUrl}/${file}`;
 
       // 1. Cargar vocabulario
       console.log('📚 Cargando vocabulario...');
