@@ -122,18 +122,11 @@ export class OnnxSSMService {
   private async loadOnnxModel(): Promise<void> {
     const modelUrl = `${MODEL_BASE_URL}/ssm_model.onnx`;
     
-    // Configurar opciones de sesión
-    const sessionOptions: any = {
-      executionProviders: ['wasm'], // WebAssembly backend
-      graphOptimizationLevel: 'all',
-    };
-
-    // Intentar usar WebGPU si está disponible
-    if ('gpu' in navigator) {
-      sessionOptions.executionProviders = ['webgpu', 'wasm'];
-    }
-
-    this.session = await this.ort.InferenceSession.create(modelUrl, sessionOptions);
+    // Usar solo WASM - es el más compatible
+    // WebGPU no está soportado en esta versión de ONNX Runtime Web
+    this.session = await this.ort.InferenceSession.create(modelUrl, {
+      executionProviders: ['wasm'],
+    });
     console.log('Modelo ONNX cargado');
   }
 
