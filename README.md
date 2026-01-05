@@ -1,5 +1,27 @@
 # ZeroCloud
 
+---
+
+## 🦀 OxideLLM_TK_SSM_V1
+
+**Nuestro modelo de lenguaje experimental basado en State Space Models (SSM)**
+
+[![HuggingFace](https://img.shields.io/badge/🤗%20Model-OxideLLM__TK__SSM__V1-yellow)](https://huggingface.co/ULFBERTO/OxideLLM_TK_SSM_V1)
+
+> ⚡ **Transformer Killer** - Arquitectura SSM que reemplaza la atención cuadrática O(n²) 
+> de los Transformers con un escaneo secuencial selectivo de complejidad **O(n) lineal**.
+
+| Especificación | Valor |
+|----------------|-------|
+| Arquitectura | SSM Selectivo (Mamba-like) |
+| Parámetros | ~770K |
+| Contexto | Teóricamente ilimitado |
+| Complejidad | O(n) lineal |
+
+🔗 [Ver modelo en HuggingFace](https://huggingface.co/ULFBERTO/OxideLLM_TK_SSM_V1)
+
+---
+
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.0.2.
 
 ## Development server

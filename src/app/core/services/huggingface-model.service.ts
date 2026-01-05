@@ -28,6 +28,13 @@ const DEFAULT_MODELS: HFModelInfo[] = [
     size: '~50MB',
     isDefault: true,
   },
+  {
+    repoId: 'ULFBERTO/OxideLLM_TK_SSM_V1',
+    name: 'OxideLLM_TK_SSM_V1',
+    description: 'Transformer Killer - SSM Selectivo (Mamba-like) con complejidad O(n) lineal',
+    size: '~9MB',
+    isDefault: true,
+  },
 ];
 
 @Injectable({ providedIn: 'root' })

@@ -112,6 +112,10 @@ export class DashboardComponent {
     this.router.navigate(['/tfjs-chat']);
   }
 
+  goToSSMChat(): void {
+    this.router.navigate(['/ssm-chat']);
+  }
+
   openAddModal(): void {
     this.showAddModal.set(true);
   }

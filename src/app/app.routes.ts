@@ -16,4 +16,9 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/tfjs-chat/tfjs-chat.component').then((m) => m.TFJSChatComponent),
   },
+  {
+    path: 'ssm-chat',
+    loadComponent: () =>
+      import('./features/ssm-chat/ssm-chat.component').then((m) => m.SSMChatComponent),
+  },
 ];
