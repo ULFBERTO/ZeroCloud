@@ -21,6 +21,7 @@ import { ChatHistoryService } from '../../core/services/chat-history.service';
 import { P2PSyncService } from '../../core/services/p2p-sync.service';
 import { GPUClusterService } from '../../core/services/gpu-cluster.service';
 import { DistributedInferenceService } from '../../core/services/distributed-inference.service';
+import { OnnxSSMService } from '../../core/services/onnx-ssm.service';
 import { SyncModalComponent } from './sync-modal/sync-modal.component';
 import { ClusterPanelComponent } from './cluster-panel/cluster-panel.component';
 
@@ -38,6 +39,7 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
 
   private readonly chatBackend = inject(ChatBackendInterface);
   private readonly webllmService = inject(WebLLMService);
+  private readonly onnxSSMService = inject(OnnxSSMService);
   private readonly modelManager = inject(ModelManagerService);
   private readonly chatHistory = inject(ChatHistoryService);
   private readonly p2pSync = inject(P2PSyncService);
@@ -49,13 +51,35 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
   readonly sessions = this.chatHistory.sortedSessions;
   readonly activeSession = this.chatHistory.activeSession;
 
+  // Detectar si es modelo SSM
+  readonly isSSMModel = computed(() => 
+    this.modelManager.selectedModelId().includes('OxideLLM_TK_SSM')
+  );
+
   // GPU selection
   readonly availableGPUs = this.webllmService.availableGPUs;
   readonly selectedGPU = this.webllmService.selectedGPU;
   readonly showGPUSelector = signal(false);
 
-  readonly state = this.chatBackend.state;
-  readonly currentResponse = this.chatBackend.currentResponse;
+  readonly state = computed(() => {
+    if (this.isSSMModel()) {
+      const ssmState = this.onnxSSMService.state();
+      return {
+        isInitialized: ssmState.isReady,
+        isLoading: ssmState.isLoading,
+        isGenerating: this._isSSMGenerating(),
+        error: ssmState.error,
+        loadingProgress: ssmState.isLoading ? { progress: ssmState.progress, text: 'Cargando SSM...' } : null,
+      };
+    }
+    return this.chatBackend.state();
+  });
+  readonly currentResponse = computed(() => {
+    if (this.isSSMModel()) {
+      return this.onnxSSMService.generatedText();
+    }
+    return this.chatBackend.currentResponse();
+  });
   readonly messages = signal<ChatMessage[]>([]);
   readonly userInput = signal<string>('');
 
@@ -64,6 +88,7 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
   readonly editingMessageIndex = signal<number | null>(null);
   readonly editingContent = signal<string>('');
   readonly showSyncModal = signal(false);
+  private readonly _isSSMGenerating = signal(false);
 
   // P2P state
   readonly isP2PConnected = this.p2pSync.isConnected;
@@ -147,7 +172,11 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
 
   async initializeModel(): Promise<void> {
     try {
-      await this.chatBackend.initialize();
+      if (this.isSSMModel()) {
+        await this.onnxSSMService.loadModel();
+      } else {
+        await this.chatBackend.initialize();
+      }
       // Crear nueva sesión si no hay una activa
       if (!this.activeSession()) {
         this.createNewChat();
@@ -176,24 +205,28 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
     this.userInput.set('');
 
     try {
-      const history = this.messages().filter((m) => m.role !== 'system');
-      
-      // Determinar modo de inferencia
-      const isHost = this.p2pSync.connectionMode() === 'hosting';
-      const hasPeers = this.p2pSync.connectedPeers().length > 0;
-      const useDistributedGPU = this.canUseDistributed();
-      
       let response: string;
-      
-      if (useDistributedGPU) {
-        // Usar inferencia distribuida con WebGPU Compute Sharing
-        response = await this.distributedInference.runWithFallback(content);
-      } else if (isHost && hasPeers) {
-        // Distribuir tarea a los peers (modo simple)
-        response = await this.sendDistributedMessage(content, history.slice(0, -1));
+
+      if (this.isSSMModel()) {
+        // Usar modelo SSM ONNX
+        this._isSSMGenerating.set(true);
+        response = await this.onnxSSMService.generate(content, 150, 0.8);
+        this._isSSMGenerating.set(false);
       } else {
-        // Procesar localmente
-        response = await this.chatBackend.sendMessage(content, history.slice(0, -1));
+        const history = this.messages().filter((m) => m.role !== 'system');
+        
+        // Determinar modo de inferencia
+        const isHost = this.p2pSync.connectionMode() === 'hosting';
+        const hasPeers = this.p2pSync.connectedPeers().length > 0;
+        const useDistributedGPU = this.canUseDistributed();
+        
+        if (useDistributedGPU) {
+          response = await this.distributedInference.runWithFallback(content);
+        } else if (isHost && hasPeers) {
+          response = await this.sendDistributedMessage(content, history.slice(0, -1));
+        } else {
+          response = await this.chatBackend.sendMessage(content, history.slice(0, -1));
+        }
       }
 
       const assistantMessage: ChatMessage = {
@@ -211,6 +244,7 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
       }
     } catch (error) {
       console.error('Error sending message:', error);
+      this._isSSMGenerating.set(false);
     }
   }
 

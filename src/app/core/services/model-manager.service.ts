@@ -24,6 +24,15 @@ const CUSTOM_MODELS_KEY = 'webllm_custom_models';
 // Modelos recomendados para navegador (ligeros)
 const RECOMMENDED_MODELS: Omit<ModelInfo, 'isDownloaded'>[] = [
   {
+    id: 'OxideLLM_TK_SSM_V1_ONNX',
+    name: '🦀 OxideLLM SSM V1 (ONNX)',
+    size: '~4MB',
+    description: '⚡ SSM Mamba-like. Complejidad O(n) lineal. Ultra ligero.',
+    isCustom: false,
+    vramRequired: '256MB',
+    requiresF16: false,
+  },
+  {
     id: 'Llama-3.2-1B-Instruct-q4f32_1-MLC',
     name: 'Llama 3.2 1B (Compatible)',
     size: '~800MB',
