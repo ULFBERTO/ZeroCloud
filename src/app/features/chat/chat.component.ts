@@ -21,7 +21,7 @@ import { ChatHistoryService } from '../../core/services/chat-history.service';
 import { P2PSyncService } from '../../core/services/p2p-sync.service';
 import { GPUClusterService } from '../../core/services/gpu-cluster.service';
 import { DistributedInferenceService } from '../../core/services/distributed-inference.service';
-import { SSMJSService } from '../../core/services/ssm-js.service';
+import { SSMWebGPUService } from '../../core/services/ssm-webgpu.service';
 import { SyncModalComponent } from './sync-modal/sync-modal.component';
 import { ClusterPanelComponent } from './cluster-panel/cluster-panel.component';
 
@@ -39,7 +39,7 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
 
   private readonly chatBackend = inject(ChatBackendInterface);
   private readonly webllmService = inject(WebLLMService);
-  private readonly ssmService = inject(SSMJSService);
+  private readonly ssmService = inject(SSMWebGPUService);
   private readonly modelManager = inject(ModelManagerService);
   private readonly chatHistory = inject(ChatHistoryService);
   private readonly p2pSync = inject(P2PSyncService);
