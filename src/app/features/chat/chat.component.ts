@@ -15,13 +15,13 @@ import {
   ChatBackendInterface,
   ChatMessage,
 } from '../../core/interfaces/chat-backend.interface';
-import { WebLLMService, GPUInfo } from '../../core/services/webllm.service';
+import { WebLLMService } from '../../core/services/webllm.service';
 import { ModelManagerService } from '../../core/services/model-manager.service';
 import { ChatHistoryService } from '../../core/services/chat-history.service';
 import { P2PSyncService } from '../../core/services/p2p-sync.service';
 import { GPUClusterService } from '../../core/services/gpu-cluster.service';
 import { DistributedInferenceService } from '../../core/services/distributed-inference.service';
-import { OnnxSSMService } from '../../core/services/onnx-ssm.service';
+import { SSMJSService } from '../../core/services/ssm-js.service';
 import { SyncModalComponent } from './sync-modal/sync-modal.component';
 import { ClusterPanelComponent } from './cluster-panel/cluster-panel.component';
 
@@ -39,7 +39,7 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
 
   private readonly chatBackend = inject(ChatBackendInterface);
   private readonly webllmService = inject(WebLLMService);
-  private readonly onnxSSMService = inject(OnnxSSMService);
+  private readonly ssmService = inject(SSMJSService);
   private readonly modelManager = inject(ModelManagerService);
   private readonly chatHistory = inject(ChatHistoryService);
   private readonly p2pSync = inject(P2PSyncService);
@@ -63,20 +63,20 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
 
   readonly state = computed(() => {
     if (this.isSSMModel()) {
-      const ssmState = this.onnxSSMService.state();
+      const ssmState = this.ssmService.state();
       return {
         isInitialized: ssmState.isReady,
         isLoading: ssmState.isLoading,
         isGenerating: this._isSSMGenerating(),
         error: ssmState.error,
-        loadingProgress: ssmState.isLoading ? { progress: ssmState.progress, text: 'Cargando SSM...' } : null,
+        loadingProgress: ssmState.isLoading ? { progress: ssmState.progress, text: ssmState.progressText || 'Cargando SSM...' } : null,
       };
     }
     return this.chatBackend.state();
   });
   readonly currentResponse = computed(() => {
     if (this.isSSMModel()) {
-      return this.onnxSSMService.generatedText();
+      return this.ssmService.generatedText();
     }
     return this.chatBackend.currentResponse();
   });
@@ -173,7 +173,7 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
   async initializeModel(): Promise<void> {
     try {
       if (this.isSSMModel()) {
-        await this.onnxSSMService.loadModel();
+        await this.ssmService.loadModel();
       } else {
         await this.chatBackend.initialize();
       }
@@ -208,9 +208,9 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
       let response: string;
 
       if (this.isSSMModel()) {
-        // Usar modelo SSM ONNX
+        // Usar modelo SSM JS
         this._isSSMGenerating.set(true);
-        response = await this.onnxSSMService.generate(content, 150, 0.8);
+        response = await this.ssmService.generate(content, 150, 0.8);
         this._isSSMGenerating.set(false);
       } else {
         const history = this.messages().filter((m) => m.role !== 'system');
