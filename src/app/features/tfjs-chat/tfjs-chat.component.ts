@@ -173,30 +173,13 @@ import { TFJSModelService } from '../../core/services/tfjs-model.service';
 
       <!-- Footer Info -->
       <footer class="bg-gray-800 border-t border-gray-700 p-3 text-center text-sm text-gray-500">
-        Modelo ejecutándose 100% en tu navegador con TensorFlow.js • Sin envío de datos a servidores
+        Modelo ejecutándose en: https://gpt-oxide.com
       </footer>
     </div>
   `,
 })
-export class TFJSChatComponent {
-  private readonly tfjsService = inject(TFJSModelService);
-  private readonly router = inject(Router);
-
-  readonly state = this.tfjsService.state;
-  readonly generatedText = this.tfjsService.generatedText;
-
-  readonly prompt = signal('En un lugar de la Mancha, de cuyo nombre ');
-  readonly maxLength = signal(200);
-  readonly temperature = signal(0.7);
-  readonly isGenerating = signal(false);
-
-  readonly canGenerate = computed(
-    () => this.state().isReady && !this.isGenerating() && this.prompt().trim().length > 0
-  );
-
-  async loadModel(): Promise<void> {
-    await this.tfjsService.loadModel();
-  }
+export class TfjsChatComponent {
+  constructor(private tfjsService: TFJSModelService) {}
 
   async generate(): Promise<void> {
     if (!this.canGenerate()) return;
@@ -210,23 +193,20 @@ export class TFJSChatComponent {
       );
     } catch (error) {
       console.error('Error generating:', error);
+      // Show user-friendly error message
+      alert(`Error generando texto: ${error.message}`);
     } finally {
       this.isGenerating.set(false);
     }
   }
 
-  clear(): void {
-    this.prompt.set('');
-  }
-
-  onKeyDown(event: KeyboardEvent): void {
-    if (event.key === 'Enter' && event.ctrlKey) {
-      event.preventDefault();
-      this.generate();
+  async loadModel(): Promise<void> {
+    try {
+      await this.tfjsService.loadModel();
+    } catch (error) {
+      console.error('Error loading model:', error);
+      // Show user-friendly error message
+      alert(`Error cargando modelo: ${error.message}`);
     }
-  }
-
-  goBack(): void {
-    this.router.navigate(['/']);
   }
 }
