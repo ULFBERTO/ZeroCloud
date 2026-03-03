@@ -299,7 +299,7 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
     this.showClusterPanel.update(v => !v);
   }
 
-  onKeyDown(event: KeyboardEvent): void {
+  onKeyDown(event: import('@angular/core').KeyboardEvent): void {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       this.sendMessage();
