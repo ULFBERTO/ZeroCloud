@@ -31,6 +31,10 @@
             ],
             "styles": [
               "src/styles.css"
+            ],
+            "allowedCommonJsDependencies": [
+              "url",
+              "sdp"
             ]
           },
           "configurations": {

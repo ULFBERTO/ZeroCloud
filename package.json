@@ -34,7 +34,8 @@
     "healcode-client": "^1.0.10",
     "peerjs": "^1.5.5",
     "rxjs": "~7.8.0",
-    "tslib": "^2.3.0"
+    "tslib": "^2.3.0",
+    "url": "^0.11.4"
   },
   "devDependencies": {
     "@angular/build": "^21.0.2",
