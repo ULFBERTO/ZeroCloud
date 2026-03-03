@@ -255,10 +255,10 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
       
       // Escuchar resultado
       const resultHandler = (event: Event) => {
-        const detail = (event as CustomEvent).detail;
-        if (detail.taskId === taskId) {
-          window.removeEventListener('p2p-inference-result', resultHandler);
-          resolve(detail.result);
+const { detail } = event as CustomEvent;
+if (detail?.taskId === taskId) {
+window.removeEventListener('p2p-inference-result', resultHandler);
+console.error("Invalid task ID", detail.taskId, "does not match", taskId);
         }
       };
       
