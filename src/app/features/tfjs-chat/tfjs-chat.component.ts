@@ -162,8 +162,8 @@ import { TFJSModelService } from '../../core/services/tfjs-model.service';
                 </button>
                 <button
                   (click)="clear()"
-                  class="px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl transition-colors">
-                  🗑️ Limpiar
+                  class="px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl transition-colors">
+                  Limpiar
                 </button>
               </div>
             </div>
@@ -171,31 +171,26 @@ import { TFJSModelService } from '../../core/services/tfjs-model.service';
         }
       </main>
 
-      <!-- Footer Info -->
-      <footer class="bg-gray-800 border-t border-gray-700 p-3 text-center text-sm text-gray-500">
-        Modelo ejecutándose 100% en tu navegador con TensorFlow.js • Sin envío de datos a servidores
-      </footer>
+      <!-- Model Loading Error Handler -->
+      <ng-container *ngIf="state().error">
+        <p class="text-red-600 mb-4">{{ state().error }}</p>
+      </ng-container>
+
     </div>
   `,
 })
-export class TFJSChatComponent {
-  private readonly tfjsService = inject(TFJSModelService);
-  private readonly router = inject(Router);
 
-  readonly state = this.tfjsService.state;
-  readonly generatedText = this.tfjsService.generatedText;
-
-  readonly prompt = signal('En un lugar de la Mancha, de cuyo nombre ');
-  readonly maxLength = signal(200);
-  readonly temperature = signal(0.7);
-  readonly isGenerating = signal(false);
-
-  readonly canGenerate = computed(
-    () => this.state().isReady && !this.isGenerating() && this.prompt().trim().length > 0
-  );
+export class TfjsChatComponent {
+  constructor(private tfjsService: TFJSModelService) {}
 
   async loadModel(): Promise<void> {
-    await this.tfjsService.loadModel();
+    try {
+      await this.tfjsService.loadModel();
+    } catch (error) {
+      console.error('Error loading model:', error);
+      // Display error message to the user
+      this.state().error = 'Error cargando modelo';
+    }
   }
 
   async generate(): Promise<void> {
@@ -210,6 +205,8 @@ export class TFJSChatComponent {
       );
     } catch (error) {
       console.error('Error generating:', error);
+      // Display error message to the user
+      this.state().error = 'Error generando texto';
     } finally {
       this.isGenerating.set(false);
     }
