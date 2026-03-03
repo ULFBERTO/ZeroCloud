@@ -1,0 +1,10 @@
+{
+  "token": "hc_tbV13kQhV5rFvKlkCkbvYDvMQHPx6jW04XceagG2",
+  "endpoint": "https://wheelless-shannon-overlushly.ngrok-free.dev",
+  "enabled": true,
+  "options": {
+    "captureConsoleErrors": true,
+    "captureUnhandledRejections": true,
+    "maxBreadcrumbs": 20
+  }
+}
