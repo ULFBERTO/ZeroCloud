@@ -105,7 +105,7 @@ export class DashboardComponent {
   }
 
   startChat(): void {
-    this.router.navigate(['/chat']);
+    this.router.navigate(['/chatt']);
   }
 
   goToTFJSChat(): void {
@@ -169,7 +169,7 @@ export class DashboardComponent {
   async searchHFModels(): Promise<void> {
     const query = this.hfSearchQuery().trim();
     if (!query) return;
-    
+
     const results = await this.hfService.searchModels(query);
     this.hfSearchResults.set(results);
   }
