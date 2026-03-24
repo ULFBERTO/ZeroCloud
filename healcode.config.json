@@ -1,6 +1,6 @@
 {
   "token": "hc_tbV13kQhV5rFvKlkCkbvYDvMQHPx6jW04XceagG2",
-  "endpoint": "https://hc-api-mbc4x7.serveo.net",
+  "endpoint": "https://sumiko-spindlelike-shara.ngrok-free.dev",
   "enabled": true,
   "options": {
     "captureConsoleErrors": true,
