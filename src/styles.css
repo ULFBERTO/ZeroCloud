@@ -1,4 +1,13 @@
-html, body {
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body {
+    @apply bg-white;
+    margin: 0;
+  }
+}
   background-color: #ffffff;
   margin: 0;
 }
