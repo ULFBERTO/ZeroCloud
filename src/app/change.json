@@ -1,0 +1,5 @@
+{
+  "content": "The background color of the main page should be changed to white.  Here's how to do it:
+
+1. Open the `src/app/styles.css` file.
+2. Add the following CSS rule:
