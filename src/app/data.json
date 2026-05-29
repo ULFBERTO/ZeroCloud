@@ -1,0 +1,2 @@
+{
+  "content": "To change the background color of the main page to white, we recommend modifying the CSS styles in the `styles.css` file located in the `src` directory. We can add the following code to the file:
