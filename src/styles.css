@@ -1,3 +1,8 @@
-/* You can add global styles to this file, and also import other style files */
-
-@import "tailwindcss";
+[
+  {
+    "path": "src/styles.css",
+    "action": "edit",
+    "search": "",
+    "replace": "/* Reset and Global Body Styling */\nhtml, body {\n  height: 100%;\n  margin: 0;\n  padding: 0;\n  background-color: #ffffff; /* or simply 'white' */\n  font-family: sans-serif; /* Optional: resets default browser font if needed */\n}"
+  }
+]
