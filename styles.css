@@ -1,0 +1,8 @@
+[
+  {
+    "path": "styles.css",
+    "action": "edit",
+    "search": "/* Add your global styles here */",
+    "replace": "/* Add your global styles here */\nbody {\n  background-color: #ffffff;\n}"
+  }
+]
