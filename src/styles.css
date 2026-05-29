@@ -1,3 +1,13 @@
-/* You can add global styles to this file, and also import other style files */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@import "tailwindcss";
+/* ... existing content ... */
+
+/* NEW: Add this block to ensure a white background */
+html,
+body {
+  background-color: white !important; /* !important ensures override of any browser/user-agent defaults */
+  height: 100%;
+  margin: 0;
+}
