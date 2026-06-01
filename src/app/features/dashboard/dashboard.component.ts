@@ -17,7 +17,7 @@ export class DashboardComponent {
   private readonly router = inject(Router);
   private readonly hfService = inject(HuggingFaceModelService);
 
-  readonly models = this.modelManager.models;
+  readonly models = this.modelManager.models; readonly oxideModels = this.models.filter(model => model.name.includes('Oxide'));
   readonly selectedModelId = this.modelManager.selectedModelId;
   readonly isChecking = this.modelManager.isChecking;
   readonly downloadedModels = this.modelManager.downloadedModels;
