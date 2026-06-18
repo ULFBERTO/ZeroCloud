@@ -24,7 +24,7 @@ import { P2PSyncService } from '../../../core/services/p2p-sync.service';
       </div>
 
       <!-- Cluster Stats -->
-      <div class="grid grid-cols-2 gap-3 mb-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
         <div class="bg-black/30 rounded-lg p-3">
           <div class="text-xs text-gray-400 mb-1">Total TFLOPS</div>
           <div class="text-xl font-bold text-green-400">
