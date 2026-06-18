@@ -1,10 +1,11 @@
-/** @type {import('tailwindcss').Config} */
+// tailwind.config.js
 module.exports = {
-  content: [
-    "./src/**/*.{html,ts}",
-  ],
+  // ...
   theme: {
-    extend: {},
+    extend: {
+      backgroundColor: {
+        primary: '#ffffff', /* Change the primary background color to white */
+      },
+    },
   },
-  plugins: [],
 }
