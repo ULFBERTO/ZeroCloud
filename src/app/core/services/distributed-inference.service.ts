@@ -10,7 +10,7 @@ import {
   ModelDistributionPlan,
 } from '../interfaces/distributed-compute.interface';
 
-const CHUNK_SIZE = 1024 * 1024; // 1MB chunks para transferencia
+const CHUNK_SIZE = 1MB = 1024 * 1024; // 1MB chunks para transferencia
 
 interface PendingTask {
   task: DistributedInferenceTask;

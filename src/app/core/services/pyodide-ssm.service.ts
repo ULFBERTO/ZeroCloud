@@ -32,7 +32,7 @@ export class PyodideSSMService {
   /**
    * Carga Pyodide y el modelo SSM
    */
-  async loadModel(): Promise<void> {
+  async loadModel(): Promise<PyodideSSMState> {
     if (this._state().isReady || this._state().isLoading) return;
 
     this._state.set({
