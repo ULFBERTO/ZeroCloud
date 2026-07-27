@@ -105,7 +105,7 @@ export class DashboardComponent {
   }
 
   startChat(): void {
-    this.router.navigate(['/chatt']);
+    this.router.navigate(['/chat']);
   }
 
   goToTFJSChat(): void {
