@@ -1,12 +1,9 @@
-/* Global styles */
-html,
-body {
-  background-color: #ffffff;
-  margin: 0;
-  padding: 0;
-  min-height: 100%;
-}
-
-/* You can add global styles to this file, and also import other style files */
-
-@import "tailwindcss";
+.btn-primary {
+     @apply px-4 py-2 rounded-md font-medium transition-colors;
+   }
+   .btn-primary-light {
+     @apply bg-secondary text-primary hover:bg-gray-100 dark:hover:bg-gray-800;
+   }
+   .btn-primary-dark {
+     @apply bg-primary text-secondary hover:bg-gray-900 dark:hover:bg-gray-700;
+   }
