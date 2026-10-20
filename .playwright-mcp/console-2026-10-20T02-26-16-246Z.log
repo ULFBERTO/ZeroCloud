@@ -1,0 +1,53 @@
+[      58ms] [LOG] Angular is running in development mode. @ http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/chunk-EF3O4NFJ.js?v=0b2d58bf:17218
+[      61ms] [LOG] [HealCode] Initialized successfully @ http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/healcode-client.js?v=0b2d58bf:14
+[      70ms] [WARNING] The powerPreference option is currently ignored when calling requestAdapter() on Windows. See https://crbug.com/369219127 @ http://localhost:4200/chunk-XJOF7ZIL.js:228
+[      84ms] [ERROR] ERROR TypeError: Cannot read properties of null (reading 'name')
+    at DashboardComponent_Template (http://localhost:4200/chunk-24A4HZ5F.js:881:132)
+    at executeTemplate (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/chunk-EF3O4NFJ.js?v=0b2d58bf:11406:5)
+    at refreshView (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/chunk-EF3O4NFJ.js?v=0b2d58bf:12066:7)
+    at detectChangesInView (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/chunk-EF3O4NFJ.js?v=0b2d58bf:12206:5)
+    at detectChangesInViewIfAttached (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/chunk-EF3O4NFJ.js?v=0b2d58bf:12189:3)
+    at detectChangesInComponent (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/chunk-EF3O4NFJ.js?v=0b2d58bf:12180:5)
+    at detectChangesInChildComponents (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/chunk-EF3O4NFJ.js?v=0b2d58bf:12228:5)
+    at refreshView (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/chunk-EF3O4NFJ.js?v=0b2d58bf:12108:7)
+    at detectChangesInView (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/chunk-EF3O4NFJ.js?v=0b2d58bf:12206:5)
+    at detectChangesInViewIfAttached (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/chunk-EF3O4NFJ.js?v=0b2d58bf:12189:3) @ http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/healcode-client.js?v=0b2d58bf:50
+[      87ms] [ERROR] ERROR TypeError: Cannot read properties of null (reading 'name')
+    at DashboardComponent_Template (http://localhost:4200/chunk-24A4HZ5F.js:881:132)
+    at executeTemplate (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/chunk-EF3O4NFJ.js?v=0b2d58bf:11406:5)
+    at refreshView (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/chunk-EF3O4NFJ.js?v=0b2d58bf:12066:7)
+    at detectChangesInView (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/chunk-EF3O4NFJ.js?v=0b2d58bf:12206:5)
+    at detectChangesInViewIfAttached (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/chunk-EF3O4NFJ.js?v=0b2d58bf:12189:3)
+    at detectChangesInComponent (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/chunk-EF3O4NFJ.js?v=0b2d58bf:12180:5)
+    at detectChangesInChildComponents (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/chunk-EF3O4NFJ.js?v=0b2d58bf:12228:5)
+    at detectChangesInView (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/chunk-EF3O4NFJ.js?v=0b2d58bf:12216:9)
+    at detectChangesInViewIfAttached (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/chunk-EF3O4NFJ.js?v=0b2d58bf:12189:3)
+    at detectChangesInEmbeddedViews (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/chunk-EF3O4NFJ.js?v=0b2d58bf:12160:7) @ http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/healcode-client.js?v=0b2d58bf:50
+[     138ms] [WARNING] The powerPreference option is currently ignored when calling requestAdapter() on Windows. See https://crbug.com/369219127 @ http://localhost:4200/chunk-XJOF7ZIL.js:246
+[     143ms] [LOG] GPUs detectadas: [intel xe-lpg (high-performance)] @ http://localhost:4200/chunk-XJOF7ZIL.js:282
+[     453ms] [ERROR] Access to fetch at 'https://sumiko-spindlelike-shara.ngrok-free.dev/api/logs/' from origin 'http://localhost:4200' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:4200/:0
+[     453ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://sumiko-spindlelike-shara.ngrok-free.dev/api/logs/:0
+[     453ms] [WARNING] [HealCode] Network error: TypeError: Failed to fetch
+    at window.fetch (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/healcode-client.js?v=0b2d58bf:32:25)
+    at d.send (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/healcode-client.js?v=0b2d58bf:90:21)
+    at d.capture (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/healcode-client.js?v=0b2d58bf:76:75)
+    at console.error (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/healcode-client.js?v=0b2d58bf:51:12)
+    at ErrorHandler.handleError (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/chunk-EF3O4NFJ.js?v=0b2d58bf:6030:19)
+    at http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/chunk-EF3O4NFJ.js?v=0b2d58bf:6046:28
+    at NoopNgZone.runOutsideAngular (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/chunk-EF3O4NFJ.js?v=0b2d58bf:6006:12)
+    at _ChangeDetectionSchedulerImpl.applicationErrorHandler (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/chunk-EF3O4NFJ.js?v=0b2d58bf:6039:12)
+    at _ChangeDetectionSchedulerImpl.tick (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/chunk-EF3O4NFJ.js?v=0b2d58bf:24329:12)
+    at http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/chunk-EF3O4NFJ.js?v=0b2d58bf:24296:102 @ http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/healcode-client.js?v=0b2d58bf:92
+[    1080ms] [ERROR] Access to fetch at 'https://sumiko-spindlelike-shara.ngrok-free.dev/api/logs/' from origin 'http://localhost:4200' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:4200/:0
+[    1080ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://sumiko-spindlelike-shara.ngrok-free.dev/api/logs/:0
+[    1080ms] [WARNING] [HealCode] Network error: TypeError: Failed to fetch
+    at window.fetch (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/healcode-client.js?v=0b2d58bf:32:25)
+    at d.send (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/healcode-client.js?v=0b2d58bf:90:21)
+    at d.capture (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/healcode-client.js?v=0b2d58bf:76:75)
+    at window.fetch (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/healcode-client.js?v=0b2d58bf:43:106)
+    at async d.send (http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/healcode-client.js?v=0b2d58bf:90:15) @ http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/healcode-client.js?v=0b2d58bf:92
+[  187747ms] [LOG] Angular is running in development mode. @ http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/chunk-EF3O4NFJ.js?v=0b2d58bf:17218
+[  187753ms] [LOG] [HealCode] Initialized successfully @ http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/healcode-client.js?v=0b2d58bf:14
+[  187832ms] [WARNING] The powerPreference option is currently ignored when calling requestAdapter() on Windows. See https://crbug.com/369219127 @ http://localhost:4200/chunk-XJOF7ZIL.js:228
+[  187936ms] [WARNING] The powerPreference option is currently ignored when calling requestAdapter() on Windows. See https://crbug.com/369219127 @ http://localhost:4200/chunk-XJOF7ZIL.js:246
+[  187960ms] [LOG] GPUs detectadas: [intel xe-lpg (high-performance)] @ http://localhost:4200/chunk-XJOF7ZIL.js:282

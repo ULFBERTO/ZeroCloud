@@ -1,0 +1,30 @@
+- generic [ref=f10e4]:
+  - banner [ref=f10e5]:
+    - generic [ref=f10e6]:
+      - generic [ref=f10e7]:
+        - button "← Volver" [ref=f10e8]
+        - generic [ref=f10e9]:
+          - heading "🦀 OxideLLM_TK_SSM_V1" [level=1] [ref=f10e10]
+          - paragraph [ref=f10e11]: State Space Model (Mamba-like)
+      - link "🤗 HuggingFace" [ref=f10e13] [cursor=pointer]:
+        - /url: https://huggingface.co/ULFBERTO/OxideLLM_TK_SSM_V1_ONNX
+  - main [ref=f10e14]:
+    - generic [ref=f10e16]:
+      - generic [ref=f10e17]: 🦀
+      - heading "OxideLLM_TK_SSM_V1" [level=2] [ref=f10e18]
+      - paragraph [ref=f10e19]: Modelo de lenguaje experimental basado en State Space Models (SSM). Arquitectura Mamba-like con complejidad O(n) lineal.
+      - generic [ref=f10e20]:
+        - paragraph [ref=f10e21]: ⚠️ Versión ONNX
+        - paragraph [ref=f10e22]: Esta es la versión ONNX convertida para navegador. No hay soporte nativo para PyTorch en web, por lo que se usa ONNX Runtime.
+      - generic [ref=f10e23]:
+        - heading "⚡ SSM vs Transformer" [level=3] [ref=f10e24]
+        - generic [ref=f10e25]:
+          - generic [ref=f10e26]:
+            - paragraph [ref=f10e27]: Transformer
+            - paragraph [ref=f10e28]: Complejidad O(n²)
+          - generic [ref=f10e29]:
+            - paragraph [ref=f10e30]: SSM ✓
+            - paragraph [ref=f10e31]: Complejidad O(n)
+      - button "🚀 Cargar Modelo" [ref=f10e32]
+      - paragraph [ref=f10e33]: Se ejecuta en tu navegador con ONNX Runtime Web
+  - contentinfo [ref=f10e34]: 🦀 SSM Transformer Killer • Versión ONNX • Complejidad O(n) lineal • 100% en tu navegador

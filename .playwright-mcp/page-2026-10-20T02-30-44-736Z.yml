@@ -1,0 +1,15 @@
+- generic [ref=f11e4]:
+  - banner [ref=f11e5]:
+    - generic [ref=f11e7]:
+      - button "← Volver" [ref=f11e8]
+      - generic [ref=f11e9]:
+        - heading "🧠 GPT OxideLLM_5M" [level=1] [ref=f11e10]
+        - paragraph [ref=f11e11]: Modelo TFJS en navegador
+  - main [ref=f11e12]:
+    - generic [ref=f11e14]:
+      - generic [ref=f11e15]: 🤖
+      - heading "GPT OxideLLM_5M" [level=2] [ref=f11e16]
+      - paragraph [ref=f11e17]: Modelo de lenguaje entrenado con el texto de OxideLLM_5M de la Mancha. Se ejecuta completamente en tu navegador.
+      - button "🚀 Cargar Modelo" [ref=f11e18]
+      - paragraph [ref=f11e19]: 100% en tu navegador • Sin envío de datos a servidores
+  - contentinfo [ref=f11e20]: Modelo ejecutándose 100% en tu navegador con TensorFlow.js • Sin envío de datos a servidores

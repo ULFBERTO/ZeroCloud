@@ -1,22 +1,15 @@
 <div class="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8">
   <div class="max-w-7xl mx-auto">
-    <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-10">
       <div>
         <h1 class="text-4xl font-bold tracking-tight text-slate-100">ZeroCloud</h1>
         <p class="mt-1 text-slate-500 text-sm">Ejecuta LLMs localmente en tu navegador. 100% privado, sin servidores.</p>
       </div>
       <div class="flex items-center gap-3">
-        <app-button
-          variant="primary"
-          size="lg"
-          label="Ir al Chat"
-          (clicked)="startChat()"
-        ></app-button>
+        <app-button variant="primary" size="lg" label="Ir al Chat" (clicked)="startChat()"></app-button>
       </div>
     </div>
 
-    <!-- Storage Info -->
     @if (storageInfo()) {
     <app-card padding="md">
       <div class="flex items-center justify-between mb-3">
@@ -30,19 +23,17 @@
     </app-card>
     }
 
-    <!-- Actions -->
     <div class="flex flex-wrap gap-3 mb-8">
       <app-button variant="secondary" label="Explorar Registro MLC-AI" (clicked)="openRegistryModal()"></app-button>
       <app-button variant="outline" label="Agregar por ID" (clicked)="openAddModal()"></app-button>
       <app-button variant="ghost" label="Actualizar" [disabled]="isChecking()" (clicked)="refreshModels()"></app-button>
     </div>
 
-    <!-- Models Grid -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
       @if (isChecking()) {
       <div class="col-span-full flex flex-col items-center justify-center py-12">
         <div class="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-3"></div>
-        <p class="text-sm text-slate-500">Verificando modelos en caché...</p>
+        <p class="text-sm text-slate-500">Verificando modelos en cache...</p>
       </div>
       }
 
@@ -72,9 +63,9 @@
             </div>
             <p class="text-xs text-slate-500 mb-3 leading-relaxed">{{ model.description }}</p>
             <div class="flex gap-3 text-[10px] text-slate-500">
-              <span class="flex items-center gap-1">📦 {{ model.size }}</span>
+              <span>📦 {{ model.size }}</span>
               @if (model.vramRequired) {
-              <span class="flex items-center gap-1">🎮 VRAM: {{ model.vramRequired }}</span>
+              <span>🎮 VRAM: {{ model.vramRequired }}</span>
               }
             </div>
             @if (isModelDisabled(model)) {
@@ -88,11 +79,7 @@
               [disabled]="isDeleting() === model.id"
               class="p-2 text-red-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50"
               title="Eliminar">
-              @if (isDeleting() === model.id) {
-              ⏳
-              } @else {
-              🗑️
-              }
+              @if (isDeleting() === model.id) { ⏳ } @else { 🗑️ }
             </button>
             }
           </div>
@@ -101,13 +88,11 @@
       }
     </div>
 
-    <!-- Info -->
     <div class="mt-10 p-5 rounded-3xl border border-slate-800 bg-slate-900/30 text-sm text-slate-500">
       <p class="mb-2">💡 Los modelos se descargan la primera vez que los usas y quedan cacheados en tu navegador.</p>
       <p>🔒 Todo se ejecuta localmente. Tus datos nunca salen de tu dispositivo.</p>
     </div>
 
-    <!-- HuggingFace Models Section -->
     <div class="mt-14">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-7">
         <div>
@@ -134,34 +119,19 @@
               </div>
               <p class="text-xs text-slate-500 mb-3 leading-relaxed">{{ model.description }}</p>
               <div class="flex gap-3 text-[10px] text-slate-500 mb-3">
-                <span class="flex items-center gap-1">📦 {{ model.size || 'Tamaño desconocido' }}</span>
+                <span>📦 {{ model.size || 'Tamaño desconocido' }}</span>
                 <a [href]="getModelUrl(model.repoId)" target="_blank" class="text-indigo-400 hover:text-indigo-300 underline underline-offset-4 transition-colors">
                   🔗 Ver en HuggingFace
                 </a>
               </div>
             </div>
             <div class="flex items-end gap-2">
-              <button
-                (click)="showDownloadInstructions(model)"
-                class="p-2 text-green-500 hover:text-green-400 hover:bg-green-500/10 rounded-lg transition-colors"
-                title="Descargar">
-                ⬇️
-              </button>
+              <button (click)="showDownloadInstructions(model)" class="p-2 text-green-500 hover:text-green-400 hover:bg-green-500/10 rounded-lg transition-colors" title="Descargar">⬇️</button>
               @if (hfDefaultModelId() !== model.repoId) {
-              <button
-                (click)="setDefaultHFModel(model.repoId)"
-                class="p-2 text-indigo-500 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-colors"
-                title="Establecer como principal">
-                ⭐
-              </button>
+              <button (click)="setDefaultHFModel(model.repoId)" class="p-2 text-indigo-500 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-colors" title="Establecer como principal">⭐</button>
               }
               @if (!model.isDefault) {
-              <button
-                (click)="removeHFModel(model.repoId)"
-                class="p-2 text-red-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                title="Eliminar">
-                🗑️
-              </button>
+              <button (click)="removeHFModel(model.repoId)" class="p-2 text-red-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" title="Eliminar">🗑️</button>
               }
             </div>
           </div>
@@ -170,31 +140,19 @@
       </div>
     </div>
 
-    <!-- Add Custom Model Sheet -->
     <app-sheet [open]="showAddModal()" title="Agregar Modelo por ID" (close)="closeAddModal()">
       <p class="text-sm text-slate-500 mb-5">
         Ingresa el ID del modelo del registro MLC-AI (ej: Llama-3.2-1B-Instruct-q4f16_1-MLC)
       </p>
-      <app-input
-        label="Model ID"
-        placeholder="Llama-3.2-1B-Instruct-q4f16_1-MLC"
-        [ngModel]="customModelId()"
-        (ngModelChange)="customModelId.set($event)"
-      ></app-input>
+      <app-input label="Model ID" placeholder="Llama-3.2-1B-Instruct-q4f16_1-MLC" [(value)]="customModelId"></app-input>
       <div class="flex gap-3 justify-end mt-6">
         <app-button variant="ghost" label="Cancelar" (clicked)="closeAddModal()"></app-button>
         <app-button variant="primary" label="Agregar" [disabled]="!customModelId().trim()" (clicked)="addCustomModel()"></app-button>
       </div>
     </app-sheet>
 
-    <!-- Registry Browser Sheet -->
     <app-sheet [open]="showRegistryModal()" title="Explorar Registro MLC-AI" (close)="closeRegistryModal()">
-      <app-input
-        label="Buscar modelo"
-        placeholder="Buscar modelo..."
-        [ngModel]="registryFilter()"
-        (ngModelChange)="registryFilter.set($event)"
-      ></app-input>
+      <app-input label="Buscar modelo" placeholder="Buscar modelo..." [(value)]="registryFilter"></app-input>
       <div class="flex-1 overflow-y-auto space-y-2 mt-4 max-h-64">
         @for (modelId of filteredRegistryModels(); track modelId) {
         <div class="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl hover:bg-slate-800 transition-colors cursor-pointer">
@@ -208,17 +166,16 @@
       </div>
     </app-sheet>
 
-    <!-- HuggingFace Add Model Sheet -->
     <app-sheet [open]="showHFModal()" title="🤗 Agregar Modelo HuggingFace" (close)="closeHFModal()">
       <div class="space-y-5">
         <div>
           <label class="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Repo ID (usuario/modelo)</label>
-          <app-input placeholder="ej: ULFBERTO/OxideLLM_5M-tfjs" [ngModel]="hfRepoId()" (ngModelChange)="hfRepoId.set($event)"></app-input>
+          <app-input placeholder="ej: ULFBERTO/OxideLLM_5M-tfjs" [(value)]="hfRepoId"></app-input>
         </div>
         <div>
           <label class="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">O buscar en HuggingFace</label>
           <div class="flex gap-2">
-            <app-input placeholder="Buscar modelos..." [ngModel]="hfSearchQuery()" (ngModelChange)="hfSearchQuery.set($event)"></app-input>
+            <app-input placeholder="Buscar modelos..." [(value)]="hfSearchQuery"></app-input>
             <app-button variant="primary" size="sm" label="🔍" [disabled]="hfIsLoading()" (clicked)="searchHFModels()"></app-button>
           </div>
         </div>
@@ -242,35 +199,36 @@
       </div>
     </app-sheet>
 
-    <!-- HuggingFace Download Instructions Sheet -->
-    <app-sheet [open]="showHFDownloadModal() && !!selectedHFModel()" title="⬇️ Descargar {{ selectedHFModel()!.name }}" (close)="closeHFDownloadModal()">
+    <app-sheet [open]="showHFDownloadModal() && !!selectedHFModel()" [title]="selectedHFModel() ? '⬇️ Descargar ' + selectedHFModel()!.name : 'Descargar'" (close)="closeHFDownloadModal()">
+      @if (selectedHFModel(); as hfModel) {
       <div class="space-y-5">
         <div>
           <label class="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Opción 1: Git Clone</label>
           <div class="flex gap-2">
             <code class="flex-1 px-4 py-3 bg-slate-900 rounded-xl text-sm text-indigo-400 overflow-x-auto border border-slate-700">
-              {{ getCloneCommand(selectedHFModel()!.repoId) }}
+              {{ getCloneCommand(hfModel.repoId) }}
             </code>
-            <button (click)="copyToClipboard(getCloneCommand(selectedHFModel()!.repoId))" class="p-2 text-slate-400 hover:text-indigo-400 rounded-lg transition-colors">📋</button>
+            <button (click)="copyToClipboard(getCloneCommand(hfModel.repoId))" class="p-2 text-slate-400 hover:text-indigo-400 rounded-lg transition-colors">📋</button>
           </div>
         </div>
         <div>
           <label class="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Opción 2: Python (huggingface_hub)</label>
           <div class="relative">
-            <pre class="px-4 py-3 bg-slate-900 rounded-xl text-sm text-slate-400 overflow-x-auto border border-slate-700">{{ getPythonCode(selectedHFModel()!.repoId) }}</pre>
-            <button (click)="copyToClipboard(getPythonCode(selectedHFModel()!.repoId))" class="absolute top-2 right-2 p-1 text-xs text-slate-500 hover:text-indigo-400">📋</button>
+            <pre class="px-4 py-3 bg-slate-900 rounded-xl text-sm text-slate-400 overflow-x-auto border border-slate-700">{{ getPythonCode(hfModel.repoId) }}</pre>
+            <button (click)="copyToClipboard(getPythonCode(hfModel.repoId))" class="absolute top-2 right-2 p-1 text-xs text-slate-500 hover:text-indigo-400">📋</button>
           </div>
         </div>
         <div>
           <label class="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Ver en HuggingFace</label>
-          <a [href]="getModelUrl(selectedHFModel()!.repoId)" target="_blank" class="text-indigo-400 hover:text-indigo-300 underline underline-offset-4 transition-colors">
-            {{ getModelUrl(selectedHFModel()!.repoId) }} ↗
+          <a [href]="getModelUrl(hfModel.repoId)" target="_blank" class="text-indigo-400 hover:text-indigo-300 underline underline-offset-4 transition-colors">
+            {{ getModelUrl(hfModel.repoId) }} ↗
           </a>
         </div>
         <div class="flex justify-end">
           <app-button variant="ghost" label="Cerrar" (clicked)="closeHFDownloadModal()"></app-button>
         </div>
       </div>
+      }
     </app-sheet>
   </div>
 </div>

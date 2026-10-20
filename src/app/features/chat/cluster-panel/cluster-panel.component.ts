@@ -44,7 +44,7 @@ import { P2PSyncService } from '../../../core/services/p2p-sync.service';
           <div class="p-3 rounded-2xl bg-slate-800/50 border border-green-500/30">
             <div class="flex items-center justify-between mb-2">
               <span class="text-sm font-medium text-slate-200">{{ node.deviceName }}</span>
-              <span [ngClass]="getStatusClass(node.status)" class="px-2 py-0.5 rounded text-xs">{{ node.status }}</span>
+              <span [class]="statusClass(node.status)">{{ node.status }}</span>
             </div>
             <div class="text-xs text-slate-500 mb-2">{{ node.gpu.vendor }} {{ node.gpu.architecture }}</div>
             <div class="flex gap-4 text-xs">
@@ -72,7 +72,7 @@ import { P2PSyncService } from '../../../core/services/p2p-sync.service';
               <div class="p-3 rounded-2xl bg-slate-800/50 border border-slate-700/50">
                 <div class="flex items-center justify-between mb-1">
                   <span class="text-sm text-slate-200">{{ node.deviceName }}</span>
-                  <span [ngClass]="getStatusClass(node.status)" class="px-2 py-0.5 rounded text-xs">{{ node.status }}</span>
+                  <span [class]="statusClass(node.status)">{{ node.status }}</span>
                 </div>
                 <div class="text-[10px] text-slate-500 mb-1">{{ node.gpu.vendor }}</div>
                 <div class="flex gap-3 text-[10px]">
@@ -166,12 +166,12 @@ import { P2PSyncService } from '../../../core/services/p2p-sync.service';
             <div class="p-2.5 rounded-2xl bg-slate-800/50 border border-slate-700/50 mb-2">
               <div class="flex items-center justify-between text-[10px] mb-1">
                 <span class="text-slate-300 truncate max-w-[160px]">{{ task.prompt }}</span>
-                <span [ngClass]="getTaskStatusClass(task.status)" class="px-2 py-0.5 rounded">{{ task.status }}</span>
+                <span [class]="taskStatusClass(task.status)">{{ task.status }}</span>
               </div>
               @if (task.status === 'running') {
                 <div class="mt-2 flex gap-1">
                   @for (stage of task.pipeline; track stage.stageIndex) {
-                    <div class="flex-1 h-1.5 rounded-full" [ngClass]="getStageClass(stage.status)"></div>
+                    <div class="flex-1 h-1.5 rounded-full" [class]="stageClass(stage.status)"></div>
                   }
                 </div>
               }
@@ -211,8 +211,8 @@ export class ClusterPanelComponent {
     }
   });
 
-  getStatusClass(status: string): string {
-    const base = 'px-2 py-0.5 rounded text-[10px]';
+  statusClass(status: string): string {
+    const base = 'px-2 py-0.5 rounded text-xs';
     switch (status) {
       case 'idle': return `${base} bg-green-500/20 text-green-400`;
       case 'computing': return `${base} bg-purple-500/20 text-purple-400`;
@@ -223,7 +223,7 @@ export class ClusterPanelComponent {
     }
   }
 
-  getTaskStatusClass(status: string): string {
+  taskStatusClass(status: string): string {
     const base = 'px-2 py-0.5 rounded';
     switch (status) {
       case 'queued': return `${base} bg-slate-700/20 text-slate-500`;
@@ -234,7 +234,7 @@ export class ClusterPanelComponent {
     }
   }
 
-  getStageClass(status: string): string {
+  stageClass(status: string): string {
     switch (status) {
       case 'pending': return 'bg-slate-700';
       case 'computing': return 'bg-purple-500 animate-pulse';

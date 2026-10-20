@@ -1,0 +1,5 @@
+[      62ms] [LOG] Angular is running in development mode. @ http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/chunk-EF3O4NFJ.js?v=0b2d58bf:17218
+[      65ms] [LOG] [HealCode] Initialized successfully @ http://localhost:4200/@fs/C:/EVIROMENT/ZeroCloud/.angular/cache/21.2.0/ZeroCloud/vite/deps/healcode-client.js?v=0b2d58bf:14
+[     802ms] [WARNING] The powerPreference option is currently ignored when calling requestAdapter() on Windows. See https://crbug.com/369219127 @ http://localhost:4200/chunk-XJOF7ZIL.js:228
+[     913ms] [WARNING] The powerPreference option is currently ignored when calling requestAdapter() on Windows. See https://crbug.com/369219127 @ http://localhost:4200/chunk-XJOF7ZIL.js:246
+[     914ms] [LOG] GPUs detectadas: [intel xe-lpg (high-performance)] @ http://localhost:4200/chunk-XJOF7ZIL.js:282
