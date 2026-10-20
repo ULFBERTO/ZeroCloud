@@ -24,11 +24,12 @@ import { DistributedInferenceService } from '../../core/services/distributed-inf
 import { SSMWebGPUService } from '../../core/services/ssm-webgpu.service';
 import { SyncModalComponent } from './sync-modal/sync-modal.component';
 import { ClusterPanelComponent } from './cluster-panel/cluster-panel.component';
+import { SheetComponent } from '../../shared/components';
 
 @Component({
   selector: 'app-chat',
   standalone: true,
-  imports: [FormsModule, SyncModalComponent, ClusterPanelComponent],
+  imports: [FormsModule, SyncModalComponent, ClusterPanelComponent, SheetComponent],
   providers: [
     { provide: ChatBackendInterface, useClass: WebLLMService },
   ],

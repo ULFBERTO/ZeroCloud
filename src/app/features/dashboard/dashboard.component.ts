@@ -4,11 +4,12 @@ import { Router } from '@angular/router';
 import { ModelManagerService, ModelInfo } from '../../core/services/model-manager.service';
 import { WebLLMService } from '../../core/services/webllm.service';
 import { HuggingFaceModelService, HFModelInfo } from '../../core/services/huggingface-model.service';
+import { ButtonComponent, CardComponent, InputComponent, BadgeComponent, SheetComponent } from '../../shared/components';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, ButtonComponent, CardComponent, InputComponent, BadgeComponent, SheetComponent],
   templateUrl: './dashboard.component.html',
 })
 export class DashboardComponent {

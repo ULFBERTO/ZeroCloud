@@ -1,19 +1,19 @@
-<div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50" (click)="tryClose()">
-  <div class="bg-gray-800 rounded-2xl w-full max-w-md max-h-[85vh] flex flex-col" (click)="$event.stopPropagation()">
+<div class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50" (click)="tryClose()">
+  <div class="bg-slate-900 rounded-3xl w-full max-w-md max-h-[90vh] flex flex-col shadow-glass border border-slate-700/50" (click)="$event.stopPropagation()">
     <!-- Header -->
-    <div class="p-6 border-b border-gray-700">
+    <div class="p-6 border-b border-slate-800">
       <div class="flex items-center justify-between">
-        <h2 class="text-xl font-semibold">🔗 Sincronización P2P</h2>
-        <button (click)="tryClose()" class="p-2 hover:bg-gray-700 rounded-lg transition-colors">✕</button>
+        <div>
+          <h2 class="text-xl font-bold text-slate-100">🔗 Sincronización P2P</h2>
+          <p class="text-sm text-slate-500 mt-1">Conecta dispositivos para inferencia distribuida</p>
+        </div>
+        <button (click)="tryClose()" class="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-xl transition-colors">✕</button>
       </div>
-      <p class="text-sm text-gray-400 mt-2">
-        Conecta dispositivos para inferencia distribuida
-      </p>
     </div>
 
     <!-- Error -->
     @if (error()) {
-      <div class="mx-6 mt-4 p-3 bg-red-600/20 border border-red-600/30 rounded-xl text-sm text-red-400">
+      <div class="mx-6 mt-4 p-3 rounded-xl border border-red-500/30 bg-red-500/10 text-sm text-red-400">
         {{ error() }}
       </div>
     }
@@ -21,17 +21,15 @@
     <div class="flex-1 overflow-y-auto p-6">
       <!-- No conectado -->
       @if (connectionMode() === 'disconnected') {
-        <div class="space-y-6">
+        <div class="space-y-5">
           <!-- Crear sala -->
-          <div class="p-4 bg-gray-700/50 rounded-xl">
-            <h3 class="font-medium mb-2">🏠 Crear sala</h3>
-            <p class="text-sm text-gray-400 mb-4">
-              Genera un código para que otros se unan
-            </p>
+          <div class="p-4 rounded-2xl bg-slate-800/50 border border-slate-700/50">
+            <h3 class="font-medium text-slate-200 mb-2">🏠 Crear sala</h3>
+            <p class="text-xs text-slate-500 mb-4">Genera un código para que otros se unan</p>
             <button
               (click)="createRoom()"
               [disabled]="isLoading()"
-              class="w-full px-4 py-3 bg-green-600 hover:bg-green-500 rounded-xl font-medium transition-colors disabled:opacity-50">
+              class="w-full px-4 py-3 bg-indigo-600 text-slate-100 font-medium rounded-xl hover:bg-indigo-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/20">
               @if (isLoading()) {
                 Creando...
               } @else {
@@ -40,14 +38,12 @@
             </button>
           </div>
 
-          <div class="text-center text-gray-500 text-sm">— o —</div>
+          <div class="text-center text-slate-500 text-sm my-3">— o —</div>
 
           <!-- Unirse -->
-          <div class="p-4 bg-gray-700/50 rounded-xl">
-            <h3 class="font-medium mb-2">🚪 Unirse a sala</h3>
-            <p class="text-sm text-gray-400 mb-4">
-              Ingresa el código de 6 caracteres
-            </p>
+          <div class="p-4 rounded-2xl bg-slate-800/50 border border-slate-700/50">
+            <h3 class="font-medium text-slate-200 mb-2">🚪 Unirse a sala</h3>
+            <p class="text-xs text-slate-500 mb-4">Ingresa el código de 6 caracteres</p>
             <div class="flex gap-2">
               <input
                 type="text"
@@ -55,14 +51,14 @@
                 (ngModelChange)="joinCode.set($event.toUpperCase())"
                 placeholder="ABC123"
                 maxlength="8"
-                class="flex-1 px-4 py-3 bg-gray-600 border border-gray-500 rounded-xl text-center font-mono text-xl uppercase tracking-widest focus:outline-none focus:border-blue-500"
+                class="flex-1 px-4 py-3 rounded-xl bg-slate-800 border border-slate-600 text-center font-mono text-xl uppercase tracking-widest text-slate-100 focus:outline-none focus:border-indigo-500"
               />
               <button
                 (click)="joinRoom()"
                 [disabled]="joinCode().length < 4 || isLoading()"
-                class="px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl font-medium transition-colors disabled:opacity-50">
+                class="px-6 py-3 bg-indigo-600 text-slate-100 font-medium rounded-xl hover:bg-indigo-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
                 @if (isLoading()) {
-                  ...
+                  …
                 } @else {
                   Unirse
                 }
@@ -72,81 +68,77 @@
         </div>
       }
 
-
       <!-- HOST: Sala creada -->
       @if (isHost()) {
-        <div class="space-y-6">
+        <div class="space-y-5">
           <!-- Código de sala -->
           <div class="text-center">
-            <p class="text-sm text-gray-400 mb-2">Código de sala</p>
-            <div class="inline-flex items-center gap-3 px-6 py-4 bg-gray-700 rounded-2xl">
-              <code class="font-mono text-3xl text-green-400 tracking-widest">{{ roomCode() }}</code>
-              <button 
-                (click)="copyCode()" 
-                class="p-2 hover:bg-gray-600 rounded-lg transition-colors" 
+            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Código de sala</p>
+            <div class="inline-flex items-center gap-3 px-6 py-4 rounded-2xl bg-slate-800 border border-slate-700">
+              <code class="font-mono text-3xl text-indigo-400 tracking-widest">{{ roomCode() }}</code>
+              <button
+                (click)="copyCode()"
+                class="p-2 text-slate-400 hover:text-indigo-400 hover:bg-slate-700 rounded-lg transition-colors"
                 title="Copiar">
                 📋
               </button>
             </div>
-            <p class="text-xs text-gray-500 mt-2">
-              Comparte este código con otros dispositivos
-            </p>
+            <p class="text-[10px] text-slate-500 mt-2">Comparte este código con otros dispositivos</p>
           </div>
 
           <!-- Estadísticas globales -->
           @if (connectedPeers().length > 0) {
             <div class="grid grid-cols-2 gap-3">
-              <div class="bg-gray-700/50 rounded-xl p-3 text-center">
+              <div class="p-3 rounded-2xl bg-slate-800/50 border border-slate-700/50 text-center">
                 <p class="text-2xl font-bold text-green-400">{{ totalTasksCompleted() }}</p>
-                <p class="text-xs text-gray-400">Tareas completadas</p>
+                <p class="text-[10px] text-slate-500 uppercase">Tareas completadas</p>
               </div>
-              <div class="bg-gray-700/50 rounded-xl p-3 text-center">
-                <p class="text-2xl font-bold text-yellow-400">{{ totalTasksInProgress() }}</p>
-                <p class="text-xs text-gray-400">En progreso</p>
+              <div class="p-3 rounded-2xl bg-slate-800/50 border border-slate-700/50 text-center">
+                <p class="text-2xl font-bold text-amber-500">{{ totalTasksInProgress() }}</p>
+                <p class="text-[10px] text-slate-500 uppercase">En progreso</p>
               </div>
             </div>
           }
 
           <!-- Lista de peers con carga -->
           <div>
-            <h3 class="font-medium mb-3 flex items-center gap-2">
+            <h3 class="font-medium text-slate-200 mb-3 flex items-center gap-2">
               👥 Dispositivos conectados
-              <span class="text-sm text-gray-400">({{ connectedPeers().length }})</span>
+              <span class="text-xs text-slate-500">({{ connectedPeers().length }})</span>
             </h3>
-            
+
             @if (peers().length > 0) {
               <div class="space-y-2">
                 @for (peer of peers(); track peer.id) {
-                  <div class="p-3 bg-gray-700/50 rounded-xl">
-                    <div class="flex items-center gap-3">
-                      <span class="w-3 h-3 rounded-full" [class]="getStatusColor(peer.status)"></span>
-                      <span class="flex-1 font-medium">{{ peer.name }}</span>
-                      @if (peer.status === 'connected') {
-                        <span class="text-xs text-green-400">Conectado</span>
-                      }
-                    </div>
+                <div class="p-3 rounded-2xl bg-slate-800/50 border border-slate-700/50">
+                  <div class="flex items-center gap-3">
+                    <span class="w-2.5 h-2.5 rounded-full" [class]="getStatusColor(peer.status)"></span>
+                    <span class="flex-1 font-medium text-slate-200">{{ peer.name }}</span>
                     @if (peer.status === 'connected') {
-                      <div class="mt-2 flex gap-4 text-xs text-gray-400">
-                        <span>✅ {{ peer.tasksCompleted }} completadas</span>
-                        <span>⏳ {{ peer.tasksInProgress }} en progreso</span>
-                        @if (peer.lastTaskTime) {
-                          <span>⚡ {{ peer.lastTaskTime }}ms</span>
-                        }
-                      </div>
-                      <!-- Barra de carga -->
-                      @if (peer.tasksInProgress > 0) {
-                        <div class="mt-2 h-1 bg-gray-600 rounded-full overflow-hidden">
-                          <div class="h-full bg-yellow-500 animate-pulse" style="width: 100%"></div>
-                        </div>
-                      }
+                      <span class="text-[10px] text-green-400">Conectado</span>
                     }
                   </div>
+                  @if (peer.status === 'connected') {
+                    <div class="mt-2.5 flex gap-3 text-[10px] text-slate-500">
+                      <span class="flex items-center gap-1">✅ {{ peer.tasksCompleted }}</span>
+                      <span class="flex items-center gap-1">⏳ {{ peer.tasksInProgress }}</span>
+                      @if (peer.lastTaskTime) {
+                        <span class="flex items-center gap-1">⚡ {{ peer.lastTaskTime }}ms</span>
+                      }
+                    </div>
+                    @if (peer.tasksInProgress > 0) {
+                      <div class="mt-2 h-1 bg-slate-700 rounded-full overflow-hidden">
+                        <div class="h-full bg-amber-500 animate-pulse" style="width: 100%"></div>
+                      </div>
+                    }
+                  }
+                </div>
                 }
               </div>
             } @else {
-              <div class="text-center py-6 text-gray-500">
-                <p class="text-3xl mb-2">👀</p>
-                <p class="text-sm">Esperando que otros se unan...</p>
+              <div class="flex flex-col items-center justify-center py-8 text-center">
+                <div class="text-3xl mb-2">👀</div>
+                <p class="text-sm text-slate-500">Esperando que otros se unan...</p>
               </div>
             }
           </div>
@@ -154,61 +146,59 @@
           <!-- Desconectar -->
           <button
             (click)="disconnect()"
-            class="w-full px-4 py-2 bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded-xl text-sm transition-colors">
+            class="w-full px-4 py-2.5 text-sm text-red-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-colors">
             Cerrar sala
           </button>
         </div>
       }
 
-
       <!-- WORKER: Conectado a sala -->
       @if (isWorker()) {
-        <div class="space-y-6">
+        <div class="space-y-5">
           <!-- Estado de conexión -->
-          <div class="text-center p-4 bg-green-600/20 border border-green-600/30 rounded-xl">
+          <div class="text-center p-4 rounded-2xl bg-green-500/10 border border-green-500/30">
             <p class="text-green-400 font-medium">✅ Conectado a la sala</p>
-            <p class="text-sm text-gray-400 mt-1">Código: {{ roomCode() }}</p>
+            <p class="text-[10px] text-slate-500 mt-1">Código: {{ roomCode() }}</p>
           </div>
 
           <!-- Mis estadísticas de procesamiento -->
-          <div class="bg-gray-700/50 rounded-xl p-4">
-            <h3 class="font-medium mb-3">📊 Mi procesamiento</h3>
+          <div class="p-4 rounded-2xl bg-slate-800/50 border border-slate-700/50">
+            <h3 class="font-medium text-slate-200 mb-3">📊 Mi procesamiento</h3>
             <div class="grid grid-cols-2 gap-3">
-              <div class="text-center">
+              <div class="text-center p-2 rounded-xl bg-slate-900/50 border border-slate-700/30">
                 <p class="text-2xl font-bold text-green-400">{{ myStats().tasksCompleted }}</p>
-                <p class="text-xs text-gray-400">Completadas</p>
+                <p class="text-[10px] text-slate-500 uppercase">Completadas</p>
               </div>
-              <div class="text-center">
-                <p class="text-2xl font-bold text-yellow-400">{{ myStats().tasksInProgress }}</p>
-                <p class="text-xs text-gray-400">En progreso</p>
+              <div class="text-center p-2 rounded-xl bg-slate-900/50 border border-slate-700/30">
+                <p class="text-2xl font-bold text-amber-500">{{ myStats().tasksInProgress }}</p>
+                <p class="text-[10px] text-slate-500 uppercase">En progreso</p>
               </div>
             </div>
-            
-            <!-- Indicador de actividad -->
+
             @if (myStats().tasksInProgress > 0) {
               <div class="mt-4">
-                <div class="flex items-center gap-2 text-sm text-yellow-400">
+                <div class="flex items-center gap-2 text-xs text-amber-400 mb-2">
                   <span class="animate-spin">⚙️</span>
                   <span>Procesando tarea...</span>
                 </div>
-                <div class="mt-2 h-2 bg-gray-600 rounded-full overflow-hidden">
-                  <div class="h-full bg-yellow-500 animate-pulse" style="width: 100%"></div>
+                <div class="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                  <div class="h-full bg-amber-500 animate-pulse" style="width: 100%"></div>
                 </div>
               </div>
             } @else {
-              <div class="mt-4 text-center text-gray-500 text-sm">
-                <p>💤 Esperando tareas del host...</p>
+              <div class="mt-4 flex flex-col items-center text-center">
+                <p class="text-[10px] text-slate-500">💤 Esperando tareas del host...</p>
               </div>
             }
           </div>
 
           <!-- Host conectado -->
           <div>
-            <h3 class="font-medium mb-2">🏠 Host</h3>
+            <h3 class="font-medium text-slate-200 mb-2">🏠 Host</h3>
             @for (peer of peers(); track peer.id) {
-              <div class="flex items-center gap-3 p-3 bg-gray-700/50 rounded-xl">
-                <span class="w-3 h-3 rounded-full" [class]="getStatusColor(peer.status)"></span>
-                <span class="flex-1">{{ peer.name }}</span>
+              <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-800/50 border border-slate-700/30">
+                <span class="w-2.5 h-2.5 rounded-full" [class]="getStatusColor(peer.status)"></span>
+                <span class="flex-1 text-slate-200">{{ peer.name }}</span>
               </div>
             }
           </div>
@@ -216,7 +206,7 @@
           <!-- Desconectar -->
           <button
             (click)="showDisconnectConfirm.set(true)"
-            class="w-full px-4 py-2 bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded-xl text-sm transition-colors">
+            class="w-full px-4 py-2.5 text-sm text-red-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-colors">
             Desconectarse
           </button>
         </div>
@@ -224,28 +214,28 @@
 
       <!-- Conectando -->
       @if (connectionMode() === 'connecting') {
-        <div class="text-center py-12">
-          <div class="animate-spin text-4xl mb-4">⏳</div>
-          <p class="text-gray-400">Conectando...</p>
+        <div class="flex flex-col items-center justify-center py-12">
+          <div class="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+          <p class="text-sm text-slate-500">Conectando...</p>
         </div>
       }
     </div>
 
     <!-- Footer -->
-    <div class="p-4 border-t border-gray-700 text-xs text-gray-500 text-center">
-      <p>🔒 Conexión directa P2P • Sin servidor intermedio • 100% privado</p>
+    <div class="p-4 border-t border-slate-800 text-[10px] text-slate-500 text-center">
+      🔒 Conexión directa P2P • Sin servidor intermedio • 100% privado
     </div>
   </div>
 
   <!-- Modal de confirmación de desconexión -->
   @if (showDisconnectConfirm()) {
-    <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-60" (click)="cancelDisconnect()">
-      <div class="bg-gray-800 rounded-xl p-6 max-w-sm mx-4" (click)="$event.stopPropagation()">
-        <h3 class="text-lg font-semibold mb-2">¿Desconectarse?</h3>
-        <p class="text-gray-400 text-sm mb-4">
+    <div class="fixed inset-0 bg-slate-950/50 flex items-center justify-center z-60" (click)="cancelDisconnect()">
+      <div class="bg-slate-900 rounded-2xl p-6 max-w-sm mx-4 shadow-glass border border-slate-700/50" (click)="$event.stopPropagation()">
+        <h3 class="text-lg font-bold text-slate-100 mb-2">¿Desconectarse?</h3>
+        <p class="text-sm text-slate-500 mb-5 leading-relaxed">
           Si te desconectas, dejarás de procesar tareas para esta sala.
           @if (myStats().tasksInProgress > 0) {
-            <span class="text-yellow-400 block mt-2">
+            <span class="block mt-2 text-amber-400">
               ⚠️ Tienes {{ myStats().tasksInProgress }} tarea(s) en progreso.
             </span>
           }
@@ -253,12 +243,12 @@
         <div class="flex gap-3">
           <button
             (click)="cancelDisconnect()"
-            class="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors">
+            class="flex-1 px-4 py-2.5 text-sm text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-xl transition-colors">
             Cancelar
           </button>
           <button
             (click)="confirmDisconnect()"
-            class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-500 rounded-lg transition-colors">
+            class="flex-1 px-4 py-2.5 text-sm text-slate-100 bg-red-600 hover:bg-red-500 rounded-xl transition-colors">
             Desconectar
           </button>
         </div>
