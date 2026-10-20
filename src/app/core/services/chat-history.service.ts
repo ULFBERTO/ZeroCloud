@@ -1,5 +1,7 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, computed, signal } from '@angular/core';
 import { ChatMessage } from '../interfaces/chat-backend.interface';
+import { readJson, readStorage, removeStorage, writeJson, writeStorage } from '../utils/storage';
+import { truncate } from '../utils/format';
 
 export interface ChatSession {
   id: string;
@@ -12,6 +14,7 @@ export interface ChatSession {
 
 const STORAGE_KEY = 'webllm_chat_sessions';
 const ACTIVE_SESSION_KEY = 'webllm_active_session';
+const NEW_CHAT_TITLE = 'Nueva conversación';
 
 @Injectable({ providedIn: 'root' })
 export class ChatHistoryService {
@@ -22,63 +25,34 @@ export class ChatHistoryService {
   readonly activeSessionId = this._activeSessionId.asReadonly();
 
   readonly activeSession = computed(() =>
-    this._sessions().find((s) => s.id === this._activeSessionId())
+    this._sessions().find((session) => session.id === this._activeSessionId()),
   );
 
   readonly sortedSessions = computed(() =>
     [...this._sessions()].sort(
-      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-    )
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    ),
+  );
+
+  readonly totalMessages = computed(() =>
+    this._sessions().reduce((total, session) => total + session.messages.length, 0),
   );
 
   constructor() {
     this.loadFromStorage();
   }
 
-  private loadFromStorage(): void {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const sessions = JSON.parse(stored).map((s: ChatSession) => ({
-          ...s,
-          createdAt: new Date(s.createdAt),
-          updatedAt: new Date(s.updatedAt),
-          messages: s.messages.map((m) => ({ ...m, timestamp: new Date(m.timestamp) })),
-        }));
-        this._sessions.set(sessions);
-      }
-
-      const activeId = localStorage.getItem(ACTIVE_SESSION_KEY);
-      if (activeId && this._sessions().some((s) => s.id === activeId)) {
-        this._activeSessionId.set(activeId);
-      }
-    } catch (e) {
-      console.error('Error loading chat history:', e);
-    }
-  }
-
-  private saveToStorage(): void {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(this._sessions()));
-    const activeId = this._activeSessionId();
-    if (activeId) {
-      localStorage.setItem(ACTIVE_SESSION_KEY, activeId);
-    } else {
-      localStorage.removeItem(ACTIVE_SESSION_KEY);
-    }
-  }
-
-
   createSession(modelId: string): ChatSession {
     const session: ChatSession = {
       id: crypto.randomUUID(),
-      title: 'Nueva conversación',
+      title: NEW_CHAT_TITLE,
       modelId,
       messages: [],
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
-    this._sessions.update((s) => [session, ...s]);
+    this._sessions.update((sessions) => [session, ...sessions]);
     this._activeSessionId.set(session.id);
     this.saveToStorage();
     return session;
@@ -91,27 +65,29 @@ export class ChatHistoryService {
 
   updateSessionMessages(sessionId: string, messages: ChatMessage[]): void {
     this._sessions.update((sessions) =>
-      sessions.map((s) => {
-        if (s.id !== sessionId) return s;
+      sessions.map((session) => {
+        if (session.id !== sessionId) return session;
 
-        // Auto-generar título del primer mensaje del usuario
-        let title = s.title;
-        if (title === 'Nueva conversación' && messages.length > 0) {
-          const firstUserMsg = messages.find((m) => m.role === 'user');
-          if (firstUserMsg) {
-            title = firstUserMsg.content.slice(0, 50) + (firstUserMsg.content.length > 50 ? '...' : '');
+        let title = session.title;
+        if (title === NEW_CHAT_TITLE) {
+          const firstUserMessage = messages.find((message) => message.role === 'user');
+          if (firstUserMessage) {
+            title = truncate(firstUserMessage.content, 48);
           }
         }
 
-        return { ...s, messages, title, updatedAt: new Date() };
-      })
+        return { ...session, messages, title, updatedAt: new Date() };
+      }),
     );
     this.saveToStorage();
   }
 
-  // Volver a un punto específico del chat (fork)
+  clearSessionMessages(sessionId: string): void {
+    this.updateSessionMessages(sessionId, []);
+  }
+
   forkFromMessage(sessionId: string, messageIndex: number): ChatSession {
-    const session = this._sessions().find((s) => s.id === sessionId);
+    const session = this._sessions().find((item) => item.id === sessionId);
     if (!session) throw new Error('Session not found');
 
     const newSession: ChatSession = {
@@ -123,50 +99,49 @@ export class ChatHistoryService {
       updatedAt: new Date(),
     };
 
-    this._sessions.update((s) => [newSession, ...s]);
+    this._sessions.update((sessions) => [newSession, ...sessions]);
     this._activeSessionId.set(newSession.id);
     this.saveToStorage();
     return newSession;
   }
 
-  // Editar un mensaje y regenerar desde ahí
   editMessageAt(sessionId: string, messageIndex: number, newContent: string): ChatMessage[] {
-    const session = this._sessions().find((s) => s.id === sessionId);
+    const session = this._sessions().find((item) => item.id === sessionId);
     if (!session) throw new Error('Session not found');
 
-    // Cortar mensajes hasta el editado y actualizar contenido
-    const newMessages = session.messages.slice(0, messageIndex);
-    const editedMessage: ChatMessage = {
+    const messages = session.messages.slice(0, messageIndex);
+    messages.push({
       ...session.messages[messageIndex],
       content: newContent,
       timestamp: new Date(),
-    };
-    newMessages.push(editedMessage);
+    });
 
     this._sessions.update((sessions) =>
-      sessions.map((s) =>
-        s.id === sessionId ? { ...s, messages: newMessages, updatedAt: new Date() } : s
-      )
+      sessions.map((item) =>
+        item.id === sessionId ? { ...item, messages, updatedAt: new Date() } : item,
+      ),
     );
     this.saveToStorage();
-    return newMessages;
+    return messages;
   }
-
 
   renameSession(sessionId: string, newTitle: string): void {
     this._sessions.update((sessions) =>
-      sessions.map((s) =>
-        s.id === sessionId ? { ...s, title: newTitle, updatedAt: new Date() } : s
-      )
+      sessions.map((session) =>
+        session.id === sessionId
+          ? { ...session, title: newTitle.trim() || NEW_CHAT_TITLE, updatedAt: new Date() }
+          : session,
+      ),
     );
     this.saveToStorage();
   }
 
   deleteSession(sessionId: string): void {
-    this._sessions.update((s) => s.filter((session) => session.id !== sessionId));
+    this._sessions.update((sessions) => sessions.filter((session) => session.id !== sessionId));
+
     if (this._activeSessionId() === sessionId) {
-      const remaining = this._sessions();
-      this._activeSessionId.set(remaining.length > 0 ? remaining[0].id : null);
+      const remaining = this.sortedSessions();
+      this._activeSessionId.set(remaining[0]?.id ?? null);
     }
     this.saveToStorage();
   }
@@ -178,7 +153,7 @@ export class ChatHistoryService {
   }
 
   exportSession(sessionId: string): string {
-    const session = this._sessions().find((s) => s.id === sessionId);
+    const session = this._sessions().find((item) => item.id === sessionId);
     if (!session) throw new Error('Session not found');
     return JSON.stringify(session, null, 2);
   }
@@ -187,18 +162,51 @@ export class ChatHistoryService {
     const data = JSON.parse(jsonData);
     const session: ChatSession = {
       id: crypto.randomUUID(),
-      title: data.title || 'Imported chat',
+      title: data.title || 'Chat importado',
       modelId: data.modelId || 'unknown',
-      messages: (data.messages || []).map((m: ChatMessage) => ({
-        ...m,
-        timestamp: new Date(m.timestamp),
+      messages: (data.messages || []).map((message: ChatMessage) => ({
+        ...message,
+        timestamp: new Date(message.timestamp),
       })),
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
-    this._sessions.update((s) => [session, ...s]);
+    this._sessions.update((sessions) => [session, ...sessions]);
     this.saveToStorage();
     return session;
+  }
+
+  private loadFromStorage(): void {
+    const stored = readJson<ChatSession[]>(STORAGE_KEY, []);
+
+    const sessions = stored
+      .filter((session) => session?.id && Array.isArray(session.messages))
+      .map((session) => ({
+        ...session,
+        createdAt: new Date(session.createdAt),
+        updatedAt: new Date(session.updatedAt),
+        messages: session.messages.map((message) => ({
+          ...message,
+          timestamp: new Date(message.timestamp),
+        })),
+      }));
+
+    this._sessions.set(sessions);
+
+    const activeId = readStorage(ACTIVE_SESSION_KEY);
+    if (activeId && sessions.some((session) => session.id === activeId)) {
+      this._activeSessionId.set(activeId);
+    }
+  }
+
+  private saveToStorage(): void {
+    writeJson(STORAGE_KEY, this._sessions());
+    const activeId = this._activeSessionId();
+    if (activeId) {
+      writeStorage(ACTIVE_SESSION_KEY, activeId);
+    } else {
+      removeStorage(ACTIVE_SESSION_KEY);
+    }
   }
 }

@@ -1,177 +1,273 @@
-<div class="flex h-screen bg-slate-950 text-slate-100">
-  <!-- Sidebar -->
-  @if (showSidebar() && state().isInitialized) {
-    <aside class="w-80 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0">
-      <div class="p-5 border-b border-slate-800">
+<div class="flex h-[calc(100dvh-3.5rem)] flex-col bg-paper lg:h-dvh">
+  <header class="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-line bg-surface px-3 sm:px-5">
+    <div class="flex min-w-0 items-center gap-2">
+      @if (state().isInitialized) {
         <button
-          (click)="createNewChat()"
-          class="w-full px-4 py-3 bg-indigo-600 text-slate-100 hover:bg-indigo-500 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20">
-          <span>➕</span> Nueva conversación
+          type="button"
+          class="rounded-[2px] p-1.5 text-muted transition-colors hover:bg-ink/5 hover:text-ink"
+          [attr.aria-label]="showSidebar() ? 'Ocultar conversaciones' : 'Mostrar conversaciones'"
+          (click)="toggleSidebar()"
+        >
+          <app-icon name="menu" [size]="16" />
         </button>
+      } @else {
+        <button
+          type="button"
+          class="rounded-[2px] p-1.5 text-muted transition-colors hover:bg-ink/5 hover:text-ink"
+          aria-label="Volver al inicio"
+          (click)="goToDashboard()"
+        >
+          <app-icon name="arrow-left" [size]="16" />
+        </button>
+      }
+
+      <span class="hidden h-4 w-px bg-line sm:block"></span>
+
+      <div class="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.14em]">
+        <span class="text-ink">Playground</span>
+        <span class="hidden text-faint sm:inline">/</span>
+        <span class="hidden text-muted sm:inline">Local runtime</span>
       </div>
 
-      <div class="flex-1 overflow-y-auto p-3 space-y-2">
-        @for (session of sessions(); track session.id) {
-          <div
-            (click)="loadSession(session.id)"
-            class="group p-3.5 rounded-2xl cursor-pointer transition-all duration-200 border border-transparent"
-            [class.bg-slate-800]="activeSession()?.id === session.id"
-            [class.border-indigo-500/30]="activeSession()?.id === session.id"
-            [class.hover:bg-slate-800]="activeSession()?.id !== session.id">
-            <div class="flex items-start justify-between gap-2">
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-slate-200 truncate">{{ session.title }}</p>
-                <p class="text-xs text-slate-500 mt-1">{{ session.messages.length }} mensajes</p>
-              </div>
+      <span class="hidden h-4 w-px bg-line md:block"></span>
+
+      <div class="hidden min-w-0 items-center gap-2 md:flex">
+        <span class="max-w-[220px] truncate text-[12px] font-medium text-ink">
+          {{ selectedModel()?.name ?? 'Sin modelo' }}
+        </span>
+        <app-badge
+          [label]="isSSMModel() ? 'SSM' : 'WebLLM'"
+          [variant]="isSSMModel() ? 'info' : 'neutral'"
+        />
+        @if (state().isInitialized) {
+          <span class="inline-flex items-center gap-1.5 font-mono text-[8px] uppercase tracking-[0.1em] text-positive">
+            <span class="h-1 w-1 rounded-full bg-positive"></span>
+            Ready
+          </span>
+        }
+      </div>
+    </div>
+
+    <div class="flex items-center gap-1.5">
+      @if (state().isInitialized) {
+        <button
+          type="button"
+          [class]="p2pButtonClass()"
+          [attr.aria-label]="isP2PConnected() ? connectedPeersCount() + ' peers conectados' : 'Abrir sincronización P2P'"
+          (click)="openSyncModal()"
+        >
+          <app-icon name="link" [size]="12" />
+          <span class="hidden sm:inline">
+            {{ isP2PConnected() ? connectedPeersCount() + ' peers' : 'P2P' }}
+          </span>
+        </button>
+
+        @if (isP2PConnected()) {
+          <button
+            type="button"
+            [class]="clusterButtonClass()"
+            aria-label="Abrir panel del clúster GPU"
+            (click)="toggleClusterPanel()"
+          >
+            <app-icon name="gpu" [size]="12" />
+            <span class="hidden lg:inline">Cluster</span>
+          </button>
+        }
+
+        <span class="hidden h-4 w-px bg-line sm:block"></span>
+
+        <button
+          type="button"
+          class="rounded-[2px] p-2 text-muted transition-colors hover:bg-negative-soft hover:text-negative disabled:opacity-30"
+          aria-label="Limpiar conversación"
+          [disabled]="messages().length === 0"
+          (click)="requestClearChat()"
+        >
+          <app-icon name="trash" [size]="15" />
+        </button>
+      }
+    </div>
+  </header>
+
+  <div class="flex min-h-0 flex-1">
+    @if (showSidebar() && state().isInitialized) {
+      <button
+        type="button"
+        class="animate-fade fixed inset-0 z-30 bg-ink/30 backdrop-blur-[1px] md:hidden"
+        aria-label="Cerrar conversaciones"
+        (click)="toggleSidebar()"
+      ></button>
+
+      <aside class="animate-slide-in fixed inset-y-0 left-0 z-40 flex w-[280px] flex-col border-r border-line bg-surface md:static md:z-auto md:w-[264px] md:shrink-0">
+        <div class="flex h-14 items-center justify-between border-b border-line px-3">
+          <div class="flex items-center gap-2">
+            <span class="label-mono">Conversaciones</span>
+            <span class="font-mono text-[9px] text-faint">{{ sessions().length }}</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <button
+              type="button"
+              class="rounded-[2px] p-1.5 text-muted transition-colors hover:bg-ink/5 hover:text-ink"
+              aria-label="Nueva conversación"
+              (click)="createNewChat()"
+            >
+              <app-icon name="plus" [size]="15" />
+            </button>
+            <button
+              type="button"
+              class="rounded-[2px] p-1.5 text-muted transition-colors hover:bg-ink/5 hover:text-ink md:hidden"
+              aria-label="Cerrar conversaciones"
+              (click)="toggleSidebar()"
+            >
+              <app-icon name="close" [size]="15" />
+            </button>
+          </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-2">
+          @for (session of sessions(); track session.id) {
+            <div class="group relative mb-0.5">
               <button
-                (click)="deleteSession(session.id, $event)"
-                class="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-500/10 rounded-xl text-red-400 transition-all"
-                title="Eliminar">
-                🗑️
+                type="button"
+                class="relative w-full border border-transparent px-3 py-2.5 text-left transition-colors hover:bg-raised"
+                [class.bg-raised]="activeSession()?.id === session.id"
+                [class.border-line]="activeSession()?.id === session.id"
+                (click)="loadSession(session.id)"
+              >
+                @if (activeSession()?.id === session.id) {
+                  <span class="absolute left-0 top-0 h-full w-[2px] bg-ink"></span>
+                }
+                <p class="truncate pr-6 text-[12px] font-medium text-ink">{{ session.title }}</p>
+                <p class="mt-1 flex items-center gap-1.5 font-mono text-[8px] uppercase tracking-[0.08em] text-faint">
+                  <span>{{ session.messages.length }} msg</span>
+                  <span>·</span>
+                  <span>{{ sessionTime(session.updatedAt) }}</span>
+                </p>
+              </button>
+
+              <button
+                type="button"
+                class="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-[2px] p-1.5 text-faint opacity-0 transition-all hover:bg-negative-soft hover:text-negative group-hover:opacity-100 focus-visible:opacity-100"
+                aria-label="Eliminar conversación"
+                (click)="requestDeleteSession(session.id, $event)"
+              >
+                <app-icon name="close" [size]="12" />
               </button>
             </div>
-          </div>
-        }
-
-        @if (sessions().length === 0) {
-          <div class="flex flex-col items-center justify-center py-12 text-center">
-            <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-slate-500 mb-3">
-              ☁️
+          } @empty {
+            <div class="flex flex-col items-center px-4 py-12 text-center">
+              <span class="flex h-10 w-10 items-center justify-center border border-line bg-raised text-faint">
+                <app-icon name="message" [size]="17" />
+              </span>
+              <p class="mt-3 text-[12px] font-medium text-ink">Sin conversaciones</p>
+              <p class="mt-1 text-[11px] leading-relaxed text-muted">
+                Inicia un chat para guardarlo en este dispositivo.
+              </p>
             </div>
-            <p class="text-xs text-slate-500">No hay conversaciones guardadas</p>
-          </div>
-        }
-      </div>
-
-      <div class="p-4 border-t border-slate-800">
-        <p class="text-[10px] text-slate-500 uppercase tracking-wider">💾 Historial local</p>
-      </div>
-    </aside>
-  }
-
-  <!-- Main Chat Area -->
-  <div class="flex-1 flex flex-col min-w-0">
-    <!-- Header -->
-    <header class="flex items-center justify-between px-6 py-5 bg-slate-900 border-b border-slate-800 shrink-0">
-      <div class="flex items-center gap-3">
-        <button
-          (click)="goToDashboard()"
-          class="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-xl transition-colors"
-          title="Volver al Dashboard">
-          ←
-        </button>
-        @if (state().isInitialized) {
-          <button
-            (click)="toggleSidebar()"
-            class="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-xl transition-colors hidden md:block"
-            title="Toggle historial">
-            ☰
-          </button>
-        }
-        <div>
-          <h1 class="text-lg font-bold text-slate-100">🤖 ZeroCloud Chat</h1>
-          @if (selectedModel()) {
-            <p class="text-xs text-slate-500">{{ selectedModel()!.name }}</p>
           }
         </div>
-      </div>
-      @if (state().isInitialized) {
-        <div class="flex items-center gap-2">
-          @if (isP2PConnected()) {
-            <button
-              (click)="toggleClusterPanel()"
-              class="px-4 py-2.5 text-xs font-medium rounded-xl transition-all duration-200 flex items-center gap-2"
-              [class]="isClusterActive() ? 'bg-purple-600/20 text-purple-400 border border-purple-500/30 hover:bg-purple-600/30' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-slate-200'">
-              🖥️
-              @if (isClusterActive()) {
-                <span>Cluster</span>
-              } @else {
-                <span>GPU</span>
-              }
-            </button>
-          }
 
-          <button
-            (click)="openSyncModal()"
-            class="px-4 py-2.5 text-xs font-medium rounded-xl transition-all duration-200 flex items-center gap-2"
-            [class]="isP2PConnected() ? 'bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-slate-200'">
-            🔗
-            @if (isP2PConnected()) {
-              <span>{{ connectedPeersCount() }} conectado(s)</span>
-            } @else {
-              <span>P2P</span>
-            }
-          </button>
-
-          <button
-            (click)="clearChat()"
-            class="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-colors"
-            title="Limpiar Chat">
-            🗑️
-          </button>
+        <div class="border-t border-line p-3">
+          <div class="flex items-center justify-between font-mono text-[8px] uppercase tracking-[0.1em] text-faint">
+            <span>Historial local</span>
+            <span>{{ sessions().length }} chats</span>
+          </div>
         </div>
-      }
-    </header>
-
-    <!-- Loading Screen -->
-    @if (!state().isInitialized && !state().error) {
-      <div class="flex-1 flex flex-col items-center justify-center p-8">
-        @if (state().isLoading) {
-          <div class="w-full max-w-md space-y-5">
-            <div class="text-center">
-              <div class="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <h2 class="text-xl font-semibold text-slate-100">Cargando modelo de IA...</h2>
-              <p class="text-slate-500 text-sm mt-2">El modelo se cachea localmente para futuras visitas</p>
-            </div>
-            <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-              <div class="bg-indigo-600 h-full rounded-full transition-all duration-300" [style.width.%]="state().loadingProgress?.progress || 0"></div>
-            </div>
-            <div class="flex justify-between text-xs text-slate-500">
-              <span>{{ state().loadingProgress?.text || 'Preparando...' }}</span>
-              <span>{{ state().loadingProgress?.progress || 0 }}%</span>
-            </div>
-          </div>
-        } @else {
-          <div class="text-center space-y-6 max-w-md">
-            <div class="text-6xl">🧠</div>
-            <h2 class="text-2xl font-semibold text-slate-100">Chat con IA Local</h2>
-            <p class="text-slate-500 text-sm">
-              Ejecuta un LLM directamente en tu navegador usando WebGPU. Sin servidores, 100% privado.
-            </p>
-            @if (selectedModel()) {
-              <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800">
-                <p class="text-xs text-slate-500 uppercase tracking-wider mb-1">Modelo seleccionado</p>
-                <p class="font-medium text-slate-200">{{ selectedModel()!.name }}</p>
-                <p class="text-[10px] text-slate-500 mt-1">{{ selectedModel()!.size }}</p>
-              </div>
-            }
-            <button
-              (click)="initializeModel()"
-              class="w-full px-8 py-3.5 bg-indigo-600 text-slate-100 font-medium rounded-2xl hover:bg-indigo-500 transition-all duration-200 shadow-lg shadow-indigo-500/20">
-              Iniciar Modelo
-            </button>
-            <p class="text-[10px] text-slate-500">Requiere Chrome/Edge 113+ con GPU compatible</p>
-          </div>
-        }
-      </div>
+      </aside>
     }
 
-    <!-- Error State -->
-    @if (state().error) {
-      <div class="flex-1 flex items-center justify-center p-8">
-        <div class="text-center space-y-5 max-w-lg">
-          <div class="text-6xl">⚠️</div>
-          <h2 class="text-xl font-semibold text-red-400">Error</h2>
-          <p class="text-slate-500 text-sm">{{ state().error }}</p>
-
-          <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 space-y-4 text-left">
-            @if (availableGPUs().length > 1) {
+    <div class="flex min-w-0 flex-1 flex-col">
+      @if (state().isLoading && !state().isInitialized) {
+        <div class="flex-1 overflow-y-auto">
+          <div class="mx-auto flex w-full max-w-2xl flex-col justify-center px-5 py-14 sm:px-8">
+            <div class="flex items-end justify-between gap-6">
               <div>
-                <label class="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">GPU</label>
+                <p class="label-mono">Model / Loading</p>
+                <h2 class="mt-2 text-3xl font-semibold tracking-[-0.04em] text-ink">
+                  Inicializando GPU
+                </h2>
+              </div>
+              <span class="font-mono text-5xl leading-none tracking-[-0.06em] text-ink">
+                {{ state().loadingProgress?.progress || 0 }}%
+              </span>
+            </div>
+
+            <div class="mt-6 h-2 w-full bg-line">
+              <div
+                class="h-full bg-ink transition-[width] duration-300"
+                [style.width.%]="state().loadingProgress?.progress || 0"
+              ></div>
+            </div>
+
+            <p class="mt-3 font-mono text-[10px] leading-relaxed text-muted">
+              {{ state().loadingProgress?.text || 'Preparando el runtime…' }}
+            </p>
+
+            <div class="mt-8 border border-line bg-surface p-4 font-mono text-[10px]">
+              <div class="flex items-center justify-between border-b border-line pb-2">
+                <span class="text-faint">MODELO</span>
+                <span class="text-ink">{{ selectedModel()?.name ?? '—' }}</span>
+              </div>
+              <div class="flex items-center justify-between border-b border-line py-2">
+                <span class="text-faint">TAMAÑO</span>
+                <span class="text-ink">{{ selectedModel()?.size ?? '—' }}</span>
+              </div>
+              <div class="flex items-center justify-between pt-2">
+                <span class="text-faint">GPU</span>
+                <span class="truncate pl-4 text-right text-ink">
+                  {{ availableGPUs()[0]?.name ?? 'Adaptador por defecto' }}
+                </span>
+              </div>
+            </div>
+
+            <p class="mt-4 text-[11px] leading-relaxed text-muted">
+              La primera carga descarga los pesos y los guarda en la caché del navegador. Las
+              siguientes visitas serán más rápidas.
+            </p>
+          </div>
+        </div>
+      }
+
+      @if (state().error) {
+        <div class="flex-1 overflow-y-auto">
+          <div class="mx-auto max-w-2xl px-5 py-12 sm:px-8">
+            <p class="label-mono">Runtime / Error</p>
+            <h2 class="editorial-title mt-3 text-[clamp(2.25rem,5vw,3.5rem)] text-negative">
+              La GPU no respondió.
+            </h2>
+            <p class="mt-3 text-[13px] leading-relaxed text-muted">{{ state().error }}</p>
+
+            <div class="mt-6 border border-negative/25 bg-negative-soft p-4">
+              <p class="font-mono text-[9px] uppercase tracking-[0.12em] text-negative">
+                Diagnóstico
+              </p>
+              <div class="mt-3 space-y-2 font-mono text-[10px] text-graphite">
+                <div class="flex items-center justify-between gap-4">
+                  <span class="text-negative/70">MODELO</span>
+                  <span class="truncate text-right">
+                    {{ selectedModel()?.name }} · {{ selectedModel()?.size }}
+                  </span>
+                </div>
+                <div class="flex items-center justify-between gap-4">
+                  <span class="text-negative/70">F16</span>
+                  <span>{{ selectedModel()?.requiresF16 ? 'Requerido' : 'No requerido' }}</span>
+                </div>
+                <div class="flex items-center justify-between gap-4">
+                  <span class="text-negative/70">GPUs</span>
+                  <span>{{ availableGPUs().length }} detectadas</span>
+                </div>
+              </div>
+            </div>
+
+            @if (availableGPUs().length > 1) {
+              <div class="mt-4">
+                <label class="label-mono mb-2 block" for="chat-gpu">GPU preferida</label>
                 <select
+                  id="chat-gpu"
                   [ngModel]="selectedGPU()"
                   (ngModelChange)="onGPUChange($event)"
-                  class="w-full px-4 py-3 rounded-xl border border-slate-600 bg-slate-800 text-slate-100 text-sm focus:outline-none focus:border-indigo-500">
+                  class="command-input w-full"
+                >
                   @for (gpu of availableGPUs(); track gpu.id) {
                     <option [value]="gpu.id">{{ gpu.name }}</option>
                   }
@@ -179,217 +275,474 @@
               </div>
             }
 
-            @if (selectedModel()) {
-              <div>
-                <p class="text-xs text-slate-500 uppercase tracking-wider mb-1">Modelo actual</p>
-                <p class="text-sm text-slate-200">{{ selectedModel()!.name }} ({{ selectedModel()!.size }})</p>
+            <div class="mt-6 flex flex-wrap gap-2">
+              <app-button label="Reintentar" icon="refresh" iconPosition="left" (clicked)="initializeModel()" />
+              @if (!isSSMModel()) {
+                <app-button
+                  label="Limpiar caché"
+                  variant="outline"
+                  icon="trash"
+                  iconPosition="left"
+                  (clicked)="clearCacheAndRetry()"
+                />
+              }
+              <app-button variant="ghost" label="Cambiar modelo" (clicked)="goToDashboard()" />
+            </div>
+
+            <div class="mt-8 border border-line bg-surface p-4">
+              <p class="label-mono mb-2">Sugerencias</p>
+              <ul class="space-y-1.5 text-[11px] leading-relaxed text-muted">
+                <li>· Prueba un modelo f32 como Llama 3.2 1B o Qwen 2.5.</li>
+                <li>· Verifica que Chrome o Edge tengan WebGPU habilitado.</li>
+                <li>· Cierra otras pestañas que estén usando la GPU.</li>
+                <li>· En GPUs Intel antiguas, evita modelos que requieran float16.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (!state().isInitialized && !state().isLoading && !state().error) {
+        <div class="flex-1 overflow-y-auto">
+          <div class="mx-auto max-w-3xl px-5 py-10 sm:px-8 sm:py-14">
+            <div class="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.16em] text-muted">
+              <span class="text-ink">+</span>
+              Playground / Ready to load
+            </div>
+
+            <h2 class="editorial-title mt-5 max-w-[14ch] text-[clamp(2.5rem,6vw,4.5rem)] text-ink">
+              {{ isSSMModel() ? 'State space en tu navegador.' : 'Carga tu modelo en el navegador.' }}
+            </h2>
+            <p class="mt-4 max-w-xl text-sm leading-relaxed text-muted">
+              {{ isSSMModel()
+                ? 'OxideLLM usa ONNX Runtime para ejecutar un SSM selectivo con complejidad lineal. La primera carga prepara el modelo localmente.'
+                : 'WebLLM descarga los pesos, los compila para WebGPU y ejecuta la inferencia sin enviar datos a ningún servidor.' }}
+            </p>
+
+            <div class="mt-8 grid grid-cols-1 border border-line sm:grid-cols-2">
+              <div class="border-b border-line p-4 sm:border-b-0 sm:border-r">
+                <div class="flex items-start justify-between">
+                  <p class="label-mono">Modelo</p>
+                  <app-badge [label]="isSSMModel() ? 'ONNX' : 'MLC'" [variant]="isSSMModel() ? 'info' : 'neutral'" />
+                </div>
+                <p class="mt-2 text-lg font-semibold tracking-[-0.02em] text-ink">
+                  {{ selectedModel()?.name ?? 'Sin modelo seleccionado' }}
+                </p>
+                <p class="mt-1 font-mono text-[9px] uppercase tracking-[0.08em] text-faint">
+                  {{ selectedModel()?.size ?? '—' }}
+                  @if (selectedModel()?.vramRequired) {
+                    · VRAM {{ selectedModel()!.vramRequired }}
+                  }
+                </p>
+              </div>
+
+              <div class="p-4">
+                <div class="flex items-start justify-between">
+                  <p class="label-mono">Hardware</p>
+                  <app-icon name="gpu" [size]="14" class="text-faint" />
+                </div>
+                <p class="mt-2 truncate text-lg font-semibold tracking-[-0.02em] text-ink">
+                  {{ availableGPUs()[0]?.name ?? 'Adaptador por defecto' }}
+                </p>
+                <p class="mt-1 font-mono text-[9px] uppercase tracking-[0.08em] text-faint">
+                  {{ supportsF16() ? 'Float16 disponible' : 'Solo float32' }} · WebGPU
+                </p>
+              </div>
+            </div>
+
+            <div class="mt-5 flex flex-wrap items-center gap-3">
+              <app-button
+                label="Iniciar modelo"
+                icon="arrow-right"
+                size="lg"
+                (clicked)="initializeModel()"
+              />
+              <span class="font-mono text-[9px] uppercase tracking-[0.1em] text-faint">
+                Requiere Chrome / Edge 113+
+              </span>
+            </div>
+
+            <div class="mt-10 border-t border-line pt-6">
+              <p class="label-mono mb-3">Otros runtimes</p>
+              <div class="grid gap-2 sm:grid-cols-2">
+                <a
+                  routerLink="/ssm-chat"
+                  class="group flex items-center justify-between border border-line bg-surface p-3 transition-colors hover:border-ink"
+                >
+                  <span>
+                    <span class="block text-[12px] font-medium text-ink">OxideLLM SSM</span>
+                    <span class="mt-0.5 block font-mono text-[8px] uppercase tracking-[0.1em] text-faint">
+                      ONNX · O(n) lineal
+                    </span>
+                  </span>
+                  <app-icon name="arrow-up-right" [size]="13" class="text-faint group-hover:text-ink" />
+                </a>
+                <a
+                  routerLink="/tfjs-chat"
+                  class="group flex items-center justify-between border border-line bg-surface p-3 transition-colors hover:border-ink"
+                >
+                  <span>
+                    <span class="block text-[12px] font-medium text-ink">OxideLLM TFJS</span>
+                    <span class="mt-0.5 block font-mono text-[8px] uppercase tracking-[0.1em] text-faint">
+                      TensorFlow.js · 5M
+                    </span>
+                  </span>
+                  <app-icon name="arrow-up-right" [size]="13" class="text-faint group-hover:text-ink" />
+                </a>
+              </div>
+            </div>
+
+            <p class="mt-6 font-mono text-[8px] uppercase tracking-[0.14em] text-faint">
+              Private by default · No API keys · No telemetry
+            </p>
+          </div>
+        </div>
+      }
+
+      @if (state().isInitialized && !state().error) {
+        <div
+          #messagesContainer
+          class="min-h-0 flex-1 overflow-y-auto"
+          (scroll)="onMessagesScroll($event)"
+        >
+          <div class="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
+            @if (displayMessages().length === 0) {
+              <div class="flex min-h-[52vh] flex-col items-center justify-center py-10 text-center">
+                <div class="relative mb-6 flex h-16 w-16 items-center justify-center">
+                  <div class="iridescent blob absolute inset-0 border border-ink/50"></div>
+                  <span class="relative flex h-7 w-7 items-center justify-center bg-ink font-mono text-[10px] text-paper">
+                    Z
+                  </span>
+                </div>
+                <p class="label-mono">New conversation</p>
+                <h3 class="mt-2 text-3xl font-semibold tracking-[-0.04em] text-ink">
+                  Pregunta lo que quieras.
+                </h3>
+                <p class="mt-2 max-w-sm text-[12px] leading-relaxed text-muted">
+                  La respuesta se genera en tu dispositivo. Nada se envía a un servidor.
+                </p>
+
+                <div class="mt-7 grid w-full gap-2 sm:grid-cols-3">
+                  @for (suggestion of suggestions; track suggestion) {
+                    <button
+                      type="button"
+                      class="border border-line bg-surface p-3 text-left text-[11px] leading-relaxed text-graphite transition-colors hover:border-ink hover:text-ink"
+                      (click)="useSuggestion(suggestion)"
+                    >
+                      {{ suggestion }}
+                    </button>
+                  }
+                </div>
               </div>
             }
-          </div>
 
-          <div class="flex flex-col sm:flex-row gap-2 justify-center">
-            <button
-              (click)="goToDashboard()"
-              class="px-4 py-2 text-sm text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-xl transition-colors">
-              Cambiar modelo
-            </button>
-            <button
-              (click)="clearCacheAndRetry()"
-              class="px-4 py-2 text-sm text-amber-500 hover:text-amber-400 hover:bg-amber-500/10 rounded-xl transition-colors">
-              Limpiar caché
-            </button>
-            <button
-              (click)="initializeModel()"
-              class="px-4 py-2 text-sm text-indigo-500 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-xl transition-colors">
-              Reintentar
-            </button>
-          </div>
+            <div class="space-y-6">
+              @for (message of displayMessages(); track $index) {
+                @if (message.role === 'user') {
+                  <div class="flex justify-end">
+                    <div class="max-w-[85%]">
+                      <div class="mb-1.5 flex items-center justify-end gap-2 font-mono text-[8px] uppercase tracking-[0.12em] text-faint">
+                        <span>{{ formatTime(message.timestamp) }}</span>
+                        <span class="text-graphite">Tú</span>
+                      </div>
 
-          <p class="text-[10px] text-slate-500 mt-2">💡 GPUs antiguas (GTX 900/1000) pueden tener problemas. Prueba otro modelo como Qwen 2.5 o SmolLM2.</p>
-        </div>
-      </div>
-    }
+                      @if (editingMessageIndex() === $index) {
+                        <div class="border border-ink bg-surface p-3">
+                          <textarea
+                            [ngModel]="editingContent()"
+                            (ngModelChange)="editingContent.set($event)"
+                            rows="3"
+                            class="command-input w-full resize-none text-[13px]"
+                          ></textarea>
+                          <div class="mt-2 flex justify-end gap-2">
+                            <app-button variant="ghost" size="sm" label="Cancelar" (clicked)="cancelEdit()" />
+                            <app-button
+                              size="sm"
+                              label="Guardar y regenerar"
+                              [disabled]="!editingContent().trim()"
+                              (clicked)="saveEditAndRegenerate()"
+                            />
+                          </div>
+                        </div>
+                      } @else {
+                        <div class="border border-ink bg-ink px-4 py-3 text-paper">
+                          <p class="whitespace-pre-wrap break-words text-[13px] leading-relaxed">
+                            {{ message.content }}
+                          </p>
+                        </div>
 
-    <!-- Chat Interface -->
-    @if (state().isInitialized && !state().error) {
-      <!-- Messages -->
-      <div #messagesContainer class="flex-1 overflow-y-auto p-6 md:p-8">
-        @if (displayMessages().length === 0) {
-          <div class="flex flex-col items-center justify-center h-full text-slate-500">
-            <div class="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center text-2xl mb-4">
-              💬
-            </div>
-            <p>Envía un mensaje para comenzar la conversación</p>
-          </div>
-        }
-
-        @for (message of displayMessages(); track $index) {
-          <div class="flex group" [class.justify-end]="message.role === 'user'">
-            <div class="max-w-[85%] relative">
-              @if (editingMessageIndex() === $index && message.role === 'user') {
-                <div class="bg-slate-800 rounded-3xl p-4 space-y-3 border border-slate-700">
-                  <textarea
-                    [ngModel]="editingContent()"
-                    (ngModelChange)="editingContent.set($event)"
-                    rows="3"
-                    class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-xl text-sm resize-none focus:outline-none focus:border-indigo-500">
-                  </textarea>
-                  <div class="flex gap-2 justify-end">
-                    <button
-                      (click)="cancelEdit()"
-                      class="px-3 py-1.5 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-700 rounded-lg transition-colors">
-                      Cancelar
-                    </button>
-                    <button
-                      (click)="saveEditAndRegenerate()"
-                      [disabled]="state().isGenerating"
-                      class="px-3 py-1.5 text-xs text-slate-100 bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors disabled:opacity-50">
-                      Guardar y regenerar
-                    </button>
+                        @if (!state().isGenerating) {
+                          <div class="mt-1.5 flex justify-end gap-0.5">
+                            <button
+                              type="button"
+                              class="rounded-[2px] p-1.5 text-faint transition-colors hover:bg-ink/5 hover:text-ink"
+                              aria-label="Editar y regenerar"
+                              (click)="startEditMessage($index)"
+                            >
+                              <app-icon name="settings" [size]="13" />
+                            </button>
+                            <button
+                              type="button"
+                              class="rounded-[2px] p-1.5 text-faint transition-colors hover:bg-ink/5 hover:text-ink"
+                              aria-label="Crear rama desde este mensaje"
+                              (click)="forkFromHere($index)"
+                            >
+                              <app-icon name="nodes" [size]="13" />
+                            </button>
+                            <button
+                              type="button"
+                              class="rounded-[2px] p-1.5 text-faint transition-colors hover:bg-ink/5 hover:text-ink"
+                              aria-label="Copiar mensaje"
+                              (click)="copyMessage($index, message.content)"
+                            >
+                              <app-icon
+                                [name]="copiedIndex() === $index ? 'check' : 'copy'"
+                                [size]="13"
+                              />
+                            </button>
+                          </div>
+                        }
+                      }
+                    </div>
                   </div>
-                </div>
-              } @else {
-                <div
-                  class="px-4 py-3.5 rounded-3xl"
-                  [class]="message.role === 'user' ? 'bg-indigo-600 text-slate-100 shadow-lg shadow-indigo-500/20' : 'bg-slate-800 text-slate-200 border border-slate-700'">
-                  <p class="whitespace-pre-wrap break-words text-sm leading-relaxed">{{ message.content }}</p>
-                </div>
+                } @else {
+                  <div class="flex justify-start">
+                    <div class="w-full max-w-[94%]">
+                      <div class="mb-1.5 flex flex-wrap items-center gap-2 font-mono text-[8px] uppercase tracking-[0.12em] text-faint">
+                        <span class="flex h-4 w-4 items-center justify-center bg-ink font-sans text-[8px] font-medium text-paper">
+                          Z
+                        </span>
+                        <span class="text-graphite">ZeroCloud</span>
+                        <span>·</span>
+                        <span>{{ selectedModel()?.name ?? 'local' }}</span>
+                        <span>·</span>
+                        <span>{{ formatTime(message.timestamp) }}</span>
+                        @if (state().isGenerating && $last) {
+                          <span class="inline-flex items-center gap-1 text-positive">
+                            <span class="h-1 w-1 animate-pulse rounded-full bg-positive"></span>
+                            Generando
+                          </span>
+                        }
+                      </div>
 
-                @if (!state().isGenerating) {
-                  <div
-                    class="absolute -bottom-5 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1"
-                    [class.right-0]="message.role === 'user'"
-                    [class.left-0]="message.role === 'assistant'">
-                    @if (message.role === 'user') {
-                      <button
-                        (click)="startEditMessage($index)"
-                        class="p-1.5 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-700 rounded-lg transition-colors"
-                        title="Editar y regenerar">
-                        ✏️
-                      </button>
-                    }
-                    <button
-                      (click)="forkFromHere($index)"
-                      class="p-1.5 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-700 rounded-lg transition-colors"
-                      title="Crear rama desde aquí">
-                        🔀
-                      </button>
+                      <div class="border border-line bg-raised px-4 py-3.5">
+                        <p class="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-graphite">
+                          {{ message.content }}@if (state().isGenerating && $last) {<span class="ml-0.5 inline-block h-3 w-1.5 animate-pulse bg-ink align-middle"></span>}
+                        </p>
+                      </div>
+
+                      @if (!state().isGenerating || !$last) {
+                        <div class="mt-1.5 flex gap-0.5">
+                          <button
+                            type="button"
+                            class="rounded-[2px] p-1.5 text-faint transition-colors hover:bg-ink/5 hover:text-ink"
+                            aria-label="Copiar respuesta"
+                            (click)="copyMessage($index, message.content)"
+                          >
+                            <app-icon
+                              [name]="copiedIndex() === $index ? 'check' : 'copy'"
+                              [size]="13"
+                            />
+                          </button>
+                          <button
+                            type="button"
+                            class="rounded-[2px] p-1.5 text-faint transition-colors hover:bg-ink/5 hover:text-ink"
+                            aria-label="Crear rama desde este mensaje"
+                            (click)="forkFromHere($index)"
+                          >
+                            <app-icon name="nodes" [size]="13" />
+                          </button>
+                        </div>
+                      }
+                    </div>
                   </div>
                 }
               }
             </div>
-          </div>
-        }
 
-        @if (state().isGenerating && !currentResponse()) {
-          <div class="flex justify-start">
-            <div class="bg-slate-800 px-4 py-3.5 rounded-3xl border border-slate-700">
-              <div class="flex space-x-1.5">
-                <span class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
-                <span class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></span>
-                <span class="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></span>
+            @if (state().isGenerating && !currentResponse()) {
+              <div class="mt-5 flex justify-start">
+                <div class="flex items-center gap-2 border border-line bg-raised px-3 py-2.5">
+                  <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-ink"></span>
+                  <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-ink" style="animation-delay: 0.12s"></span>
+                  <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-ink" style="animation-delay: 0.24s"></span>
+                  <span class="ml-1 font-mono text-[9px] uppercase tracking-[0.1em] text-muted">
+                    Pensando
+                  </span>
+                </div>
               </div>
-            </div>
+            }
           </div>
-        }
-      </div>
+        </div>
 
-      <!-- Input Area -->
-      <div class="p-5 bg-slate-900 border-t border-slate-800 shrink-0">
-        <div class="flex items-end gap-3 max-w-4xl mx-auto relative">
-          @if (availableGPUs().length > 0) {
-            <div class="relative">
-              <button
-                (click)="toggleGPUSelector()"
-                class="p-2.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-xl transition-colors"
-                title="Seleccionar GPU">
-                🖥️
-              </button>
+        <div class="shrink-0 border-t border-line bg-surface px-3 py-3 sm:px-5">
+          <div class="mx-auto max-w-3xl">
+            <div class="border border-line bg-raised p-2">
+              <textarea
+                #composerInput
+                [ngModel]="userInput()"
+                (ngModelChange)="userInput.set($event)"
+                (keydown)="onKeyDown($event)"
+                placeholder="Escribe un mensaje…"
+                rows="2"
+                class="composer-textarea w-full resize-none border-0 bg-transparent px-2 py-1.5 text-[13px] leading-relaxed text-ink placeholder:text-faint focus:outline-none"
+                [disabled]="state().isGenerating"
+                aria-label="Mensaje"
+              ></textarea>
 
-              @if (showGPUSelector()) {
-                <div class="absolute bottom-full left-0 mb-2 w-64 bg-slate-900 rounded-2xl shadow-glass border border-slate-700 overflow-hidden z-10">
-                  <div class="p-3 border-b border-slate-800 text-xs text-slate-500 uppercase tracking-wider">
-                    GPU en uso
-                  </div>
-                  @for (gpu of availableGPUs(); track gpu.id) {
-                    <button
-                      (click)="onGPUChange(gpu.id)"
-                      class="w-full px-3 py-2.5 text-left text-sm hover:bg-slate-800 transition-colors"
-                      [class.bg-slate-800]="selectedGPU() === gpu.id">
-                      @if (selectedGPU() === gpu.id) {
-                        <span class="text-indigo-400">✓</span>
-                      } @else {
-                        <span class="w-4"></span>
+              <div class="flex items-center justify-between border-t border-line pt-2">
+                <div class="flex items-center gap-1.5">
+                  @if (availableGPUs().length > 0) {
+                    <div class="relative">
+                      <button
+                        type="button"
+                        class="inline-flex h-8 items-center gap-1.5 rounded-[2px] px-2 font-mono text-[9px] uppercase tracking-[0.08em] text-muted transition-colors hover:bg-ink/5 hover:text-ink"
+                        aria-label="Seleccionar GPU"
+                        (click)="toggleGPUSelector()"
+                      >
+                        <app-icon name="gpu" [size]="13" />
+                        <span class="hidden sm:inline">GPU</span>
+                        <app-icon name="chevron-down" [size]="10" />
+                      </button>
+
+                      @if (showGPUSelector()) {
+                        <div class="absolute bottom-full left-0 z-30 mb-2 w-64 border border-line bg-surface shadow-float">
+                          <div class="border-b border-line px-3 py-2">
+                            <p class="label-mono">GPU en uso</p>
+                          </div>
+                          @for (gpu of availableGPUs(); track gpu.id) {
+                            <button
+                              type="button"
+                              class="flex w-full items-center gap-2 border-b border-line px-3 py-2.5 text-left text-[11px] transition-colors last:border-b-0 hover:bg-paper"
+                              [class.bg-raised]="selectedGPU() === gpu.id"
+                              (click)="onGPUChange(gpu.id)"
+                            >
+                              <span class="w-3 text-ink">
+                                @if (selectedGPU() === gpu.id) {
+                                  <app-icon name="check" [size]="11" />
+                                }
+                              </span>
+                              <span class="min-w-0 flex-1">
+                                <span class="block truncate text-ink">{{ gpu.name }}</span>
+                                <span class="mt-0.5 block font-mono text-[8px] uppercase tracking-[0.08em] text-faint">
+                                  {{ gpu.supportsF16 ? 'float16' : 'float32' }}
+                                </span>
+                              </span>
+                            </button>
+                          }
+                        </div>
                       }
-                      <span class="truncate text-slate-300">{{ gpu.name }}</span>
-                    </button>
-                  }
-                  @if (availableGPUs().length === 1) {
-                    <div class="p-3 border-t border-slate-800 text-[10px] text-slate-500 space-y-1">
-                      <p>Solo se detectó 1 GPU</p>
-                      <p class="text-slate-600">💡 Verifica que Chrome use la GPU dedicada.</p>
                     </div>
                   }
+
+                  @if (isP2PConnected()) {
+                    <span class="inline-flex h-8 items-center gap-1.5 px-2 font-mono text-[9px] uppercase tracking-[0.08em] text-positive">
+                      <app-icon name="link" [size]="12" />
+                      <span class="hidden sm:inline">{{ connectedPeersCount() }} peers</span>
+                    </span>
+                  }
                 </div>
-              }
+
+                <div class="flex items-center gap-1.5">
+                  <span class="hidden font-mono text-[8px] uppercase tracking-[0.1em] text-faint sm:inline">
+                    Enter envía · Shift+Enter salto
+                  </span>
+
+                  @if (state().isGenerating) {
+                    <button
+                      type="button"
+                      class="inline-flex h-8 items-center gap-1.5 border border-negative/30 bg-negative-soft px-2.5 font-mono text-[9px] uppercase tracking-[0.1em] text-negative transition-colors hover:bg-negative hover:text-white disabled:opacity-40"
+                      [disabled]="!canStop()"
+                      (click)="stopGeneration()"
+                    >
+                      <app-icon name="stop" [size]="11" />
+                      Parar
+                    </button>
+                  } @else {
+                    <button
+                      type="button"
+                      class="inline-flex h-8 items-center gap-1.5 bg-ink px-3 font-mono text-[9px] uppercase tracking-[0.1em] text-paper transition-colors hover:bg-graphite disabled:cursor-not-allowed disabled:opacity-30"
+                      [disabled]="!canSend()"
+                      (click)="sendMessage()"
+                    >
+                      <app-icon name="send" [size]="12" />
+                      Enviar
+                    </button>
+                  }
+                </div>
+              </div>
             </div>
-          }
 
-          <textarea
-            [ngModel]="userInput()"
-            (ngModelChange)="userInput.set($event)"
-            (keydown)="onKeyDown($event)"
-            placeholder="Escribe tu mensaje..."
-            rows="1"
-            class="flex-1 px-4 py-3.5 bg-slate-800 border border-slate-600 rounded-2xl resize-none focus:outline-none focus:border-indigo-500 transition-colors text-sm"
-            [disabled]="state().isGenerating">
-          </textarea>
-
-          @if (state().isGenerating) {
-            <button
-              (click)="stopGeneration()"
-              class="p-3 bg-red-600 text-slate-100 hover:bg-red-500 rounded-xl transition-colors">
-              ⏹️
-            </button>
-          } @else {
-            <button
-              (click)="sendMessage()"
-              [disabled]="!canSend()"
-              class="px-5 py-3.5 bg-indigo-600 text-slate-100 font-medium hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed rounded-xl transition-all duration-200 shadow-lg shadow-indigo-500/20">
-              ➤
-            </button>
-          }
+            <p class="mt-2 text-center font-mono text-[8px] uppercase tracking-[0.1em] text-faint">
+              Los datos permanecen en tu dispositivo
+            </p>
+          </div>
         </div>
-      </div>
-    }
-
-    <!-- P2P Sync Sheet -->
-    <app-sheet [open]="showSyncModal()" title="🔗 Sincronización P2P" (close)="closeSyncModal()">
-      <app-sync-modal (close)="closeSyncModal()" />
-    </app-sheet>
-
-    <!-- GPU Cluster Panel -->
-    @if (showClusterPanel()) {
-      <div class="fixed inset-0 z-40" (click)="toggleClusterPanel()">
-        <div class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"></div>
-      </div>
-      <aside
-        class="fixed right-0 top-0 h-full w-[420px] bg-slate-900 border-l border-slate-800 shadow-glass z-50 transform transition-transform duration-300 ease-out"
-        [class.translate-x-full]="!showClusterPanel()"
-        [class.translate-x-0]="showClusterPanel()"
-        (click)="$event.stopPropagation()">
-        <div class="flex items-center justify-between p-5 border-b border-slate-800">
-          <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2">🖥️ WebGPU Cluster</h2>
-          <button
-            (click)="toggleClusterPanel()"
-            class="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-xl transition-colors">
-            ✕
-          </button>
-        </div>
-        <div class="flex-1 overflow-y-auto p-4">
-          <app-cluster-panel />
-        </div>
-      </aside>
-    }
+      }
+    </div>
   </div>
+
+  <app-sheet [open]="showSyncModal()" title="Sincronización P2P" eyebrow="WebRTC" (close)="closeSyncModal()">
+    <app-sync-modal (close)="closeSyncModal()" />
+  </app-sheet>
+
+  @if (showClusterPanel()) {
+    <div class="fixed inset-0 z-40" (click)="toggleClusterPanel()">
+      <div class="absolute inset-0 bg-ink/30 backdrop-blur-[2px]"></div>
+    </div>
+    <aside
+      class="fixed right-0 top-0 z-50 flex h-full w-full max-w-[460px] flex-col border-l border-line bg-surface shadow-float"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="flex h-14 items-center justify-between border-b border-line px-5">
+        <div>
+          <p class="label-mono">Distributed compute</p>
+          <h2 class="mt-0.5 text-[15px] font-semibold tracking-[-0.02em] text-ink">GPU Cluster</h2>
+        </div>
+        <button
+          type="button"
+          class="rounded-[2px] p-2 text-muted transition-colors hover:bg-ink/5 hover:text-ink"
+          aria-label="Cerrar panel del clúster"
+          (click)="toggleClusterPanel()"
+        >
+          <app-icon name="close" [size]="16" />
+        </button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-4">
+        <app-cluster-panel />
+      </div>
+    </aside>
+  }
+
+  <app-dialog
+    [open]="showClearConfirm()"
+    title="Limpiar conversación"
+    (close)="showClearConfirm.set(false)"
+  >
+    <p>
+      Se eliminarán los {{ messages().length }} mensajes de esta conversación. El historial de otras
+      sesiones no se modifica.
+    </p>
+    <div footer class="flex gap-2">
+      <app-button variant="ghost" label="Cancelar" (clicked)="showClearConfirm.set(false)" />
+      <app-button variant="danger" label="Limpiar" icon="trash" iconPosition="left" (clicked)="clearChat()" />
+    </div>
+  </app-dialog>
+
+  <app-dialog
+    [open]="!!pendingSessionDelete()"
+    title="Eliminar conversación"
+    (close)="pendingSessionDelete.set(null)"
+  >
+    @if (sessionToDelete(); as session) {
+      <p>
+        <span class="font-medium text-ink">{{ session.title }}</span> y sus
+        {{ session.messages.length }} mensajes se eliminarán de este dispositivo.
+      </p>
+    }
+    <div footer class="flex gap-2">
+      <app-button variant="ghost" label="Cancelar" (clicked)="pendingSessionDelete.set(null)" />
+      <app-button variant="danger" label="Eliminar" (clicked)="confirmDeleteSession()" />
+    </div>
+  </app-dialog>
 </div>

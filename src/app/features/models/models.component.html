@@ -1,0 +1,554 @@
+<div class="min-h-screen">
+  <section class="grid-field border-b border-line px-5 py-8 sm:px-8">
+    <div class="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.16em] text-muted">
+      <span class="text-ink">+</span>
+      Models / Catalog
+      <span class="h-px w-10 bg-line-strong"></span>
+      <span class="text-faint">{{ models().length }} entradas</span>
+    </div>
+
+    <div class="mt-5 grid grid-cols-1 items-end gap-8 xl:grid-cols-[minmax(0,1fr)_auto]">
+      <div>
+        <h1 class="editorial-title text-[clamp(2.75rem,5.5vw,4.75rem)] text-ink">
+          Model<br />registry
+        </h1>
+        <p class="mt-4 max-w-xl text-sm leading-relaxed text-muted">
+          Elige el modelo que se ejecutará en tu GPU. Los pesos se guardan en la caché del
+          navegador y solo se descargan la primera vez.
+        </p>
+
+        <div class="mt-6 flex flex-wrap items-center gap-2">
+          <app-button
+            label="Abrir playground"
+            icon="arrow-right"
+            size="lg"
+            (clicked)="openPlayground()"
+          />
+          <app-button
+            label="Explorar registro"
+            variant="outline"
+            size="lg"
+            icon="search"
+            iconPosition="left"
+            (clicked)="openRegistryModal()"
+          />
+        </div>
+      </div>
+
+      <div class="grid w-full grid-cols-2 border border-line bg-surface xl:w-[390px]">
+        <div class="border-b border-r border-line p-4">
+          <p class="label-mono">Descargados</p>
+          <p class="mt-2 text-2xl font-semibold tracking-[-0.04em] text-ink">
+            {{ downloadedModels().length }}
+          </p>
+          <p class="mt-0.5 font-mono text-[8px] uppercase tracking-[0.1em] text-faint">en caché</p>
+        </div>
+        <div class="border-b border-line p-4">
+          <p class="label-mono">Soportados</p>
+          <p class="mt-2 text-2xl font-semibold tracking-[-0.04em] text-ink">{{ models().length }}</p>
+          <p class="mt-0.5 font-mono text-[8px] uppercase tracking-[0.1em] text-faint">catálogo MLC</p>
+        </div>
+        <div class="border-r border-line p-4">
+          <p class="label-mono">Almacenaje</p>
+          <p class="mt-2 text-2xl font-semibold tracking-[-0.04em] text-ink">
+            {{ storageInfo()?.used ?? '—' }}
+          </p>
+          <p class="mt-0.5 font-mono text-[8px] uppercase tracking-[0.1em] text-faint">
+            de {{ storageInfo()?.quota ?? '—' }}
+          </p>
+        </div>
+        <div class="p-4">
+          <p class="label-mono">Cuota</p>
+          <p class="mt-2 text-2xl font-semibold tracking-[-0.04em] text-ink">
+            {{ storageInfo()?.percent ?? 0 }}%
+          </p>
+          <div class="mt-2 h-1 w-full bg-line">
+            <div class="h-full bg-ink" [style.width.%]="storageInfo()?.percent ?? 0"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="sticky top-0 z-20 border-b border-line bg-paper/95 backdrop-blur">
+    <div class="flex flex-col gap-3 px-5 py-3 sm:px-8 md:flex-row md:items-center">
+      <div class="relative flex-1">
+        <app-icon
+          name="search"
+          [size]="15"
+          class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint"
+        />
+        <input
+          type="search"
+          class="command-input w-full pl-9"
+          placeholder="Buscar por nombre o ID…"
+          aria-label="Buscar modelos"
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event)"
+        />
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <app-button
+          variant="secondary"
+          size="sm"
+          label="Agregar por ID"
+          icon="plus"
+          iconPosition="left"
+          (clicked)="openAddModal()"
+        />
+        <app-button
+          variant="secondary"
+          size="sm"
+          label="Actualizar"
+          icon="refresh"
+          iconPosition="left"
+          [loading]="isChecking()"
+          (clicked)="refreshModels()"
+        />
+      </div>
+    </div>
+  </div>
+
+  <section class="px-5 py-6 sm:px-8">
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <p class="label-mono">01 / MLC + WebGPU</p>
+        <h2 class="mt-1.5 text-xl font-semibold tracking-[-0.03em] text-ink">
+          Catálogo local
+        </h2>
+      </div>
+      <p class="font-mono text-[9px] uppercase tracking-[0.1em] text-faint">
+        {{ filteredModels().length }} resultados
+      </p>
+    </div>
+
+    <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
+      @if (isChecking() && models().length === 0) {
+        @for (placeholder of [1, 2, 3, 4, 5, 6]; track placeholder) {
+          <div class="panel p-4">
+            <div class="h-3 w-1/2 animate-pulse bg-line"></div>
+            <div class="mt-2 h-2 w-3/4 animate-pulse bg-line/70"></div>
+            <div class="mt-6 h-10 animate-pulse bg-line/60"></div>
+          </div>
+        }
+      }
+
+      @for (model of filteredModels(); track model.id) {
+        <article class="panel flex flex-col transition-colors hover:border-line-strong">
+          <div class="h-1" [class]="selectedModelId() === model.id ? 'bg-ink' : 'bg-line'"></div>
+
+          <div class="flex items-start justify-between gap-3 p-4 pb-3">
+            <div class="flex min-w-0 items-start gap-3">
+              <span class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center border border-line bg-surface text-muted">
+                <app-icon [name]="model.isCustom ? 'database' : 'layers'" [size]="15" />
+              </span>
+              <div class="min-w-0">
+                <h3 class="truncate text-[14px] font-semibold tracking-[-0.01em] text-ink">
+                  {{ model.name }}
+                </h3>
+                <p class="mt-0.5 truncate font-mono text-[8px] uppercase tracking-[0.08em] text-faint">
+                  {{ model.id }}
+                </p>
+              </div>
+            </div>
+
+            <div class="flex shrink-0 flex-col items-end gap-1">
+              @if (selectedModelId() === model.id) {
+                <app-badge label="Activo" variant="ink" />
+              }
+              @if (model.isDownloaded) {
+                <app-badge label="Caché" variant="success" dot />
+              }
+              @if (isModelDisabled(model)) {
+                <app-badge label="No f16" variant="error" />
+              }
+            </div>
+          </div>
+
+          <p class="line-clamp-2 min-h-[34px] px-4 text-[11px] leading-relaxed text-muted">
+            {{ model.description }}
+          </p>
+
+          <div class="mx-4 mt-4 grid grid-cols-2 border border-line">
+            <div class="border-r border-line px-2.5 py-2">
+              <p class="label-mono">Tamaño</p>
+              <p class="mt-1 font-mono text-[10px] text-ink">{{ model.size }}</p>
+            </div>
+            <div class="px-2.5 py-2">
+              <p class="label-mono">VRAM</p>
+              <p class="mt-1 font-mono text-[10px] text-ink">
+                {{ model.vramRequired ?? '—' }}
+              </p>
+            </div>
+          </div>
+
+          <div class="mt-4 flex items-center justify-between gap-2 border-t border-line p-3">
+            <div class="flex items-center gap-1.5">
+              @if (selectedModelId() !== model.id) {
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1.5 border border-line px-3 py-1.5 font-mono text-[9px] uppercase tracking-[0.1em] text-ink transition-colors hover:border-ink disabled:cursor-not-allowed disabled:opacity-40"
+                  [disabled]="isModelDisabled(model)"
+                  (click)="selectModel(model.id)"
+                >
+                  Seleccionar
+                </button>
+              }
+              <button
+                type="button"
+                class="inline-flex items-center gap-1.5 px-2 py-1.5 font-mono text-[9px] uppercase tracking-[0.1em] text-muted transition-colors hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+                [disabled]="isModelDisabled(model)"
+                (click)="useModel(model.id)"
+              >
+                Usar
+                <app-icon name="arrow-right" [size]="10" />
+              </button>
+            </div>
+
+            @if (model.isDownloaded) {
+              <button
+                type="button"
+                class="p-1.5 text-faint transition-colors hover:text-negative"
+                [attr.aria-label]="'Eliminar ' + model.name"
+                (click)="requestDelete(model)"
+              >
+                <app-icon name="trash" [size]="14" />
+              </button>
+            }
+          </div>
+        </article>
+      } @empty {
+        @if (!isChecking()) {
+          <div class="col-span-full border border-dashed border-line px-5 py-12 text-center">
+            <app-icon name="search" [size]="22" class="mx-auto text-faint" />
+            <p class="mt-3 text-sm font-medium text-ink">Sin resultados</p>
+            <p class="mt-1 text-[12px] text-muted">
+              Prueba con otro término o agrega un modelo por ID.
+            </p>
+          </div>
+        }
+      }
+    </div>
+  </section>
+
+  <section class="border-t border-line bg-surface px-5 py-8 sm:px-8">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <p class="label-mono">02 / Hugging Face</p>
+        <h2 class="mt-1.5 text-xl font-semibold tracking-[-0.03em] text-ink">
+          Modelos externos
+        </h2>
+        <p class="mt-1 text-[12px] text-muted">
+          Repos para descargar y usar con Python o TensorFlow.js.
+        </p>
+      </div>
+      <app-button
+        variant="secondary"
+        size="sm"
+        label="Agregar modelo"
+        icon="plus"
+        iconPosition="left"
+        (clicked)="openHfModal()"
+      />
+    </div>
+
+    <div class="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-2">
+      @for (model of hfModels(); track model.repoId) {
+        <article class="panel-raised flex flex-col p-4">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <h3 class="text-[14px] font-semibold tracking-[-0.01em] text-ink">{{ model.name }}</h3>
+                @if (hfDefaultModelId() === model.repoId) {
+                  <app-badge label="Principal" variant="info" />
+                }
+                @if (model.isDefault) {
+                  <app-badge label="Incluido" variant="neutral" />
+                }
+              </div>
+              <p class="mt-1 truncate font-mono text-[9px] text-faint">{{ model.repoId }}</p>
+            </div>
+            <span class="font-mono text-[9px] text-muted">{{ model.size ?? '—' }}</span>
+          </div>
+
+          <p class="mt-3 line-clamp-2 min-h-[32px] text-[11px] leading-relaxed text-muted">
+            {{ model.description }}
+          </p>
+
+          <div class="mt-4 flex items-center justify-between gap-2 border-t border-line pt-3">
+            <a
+              [href]="getModelUrl(model.repoId)"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.1em] text-accent hover:underline"
+            >
+              Hugging Face
+              <app-icon name="arrow-up-right" [size]="11" />
+            </a>
+
+            <div class="flex items-center gap-1">
+              <button
+                type="button"
+                class="p-1.5 text-muted transition-colors hover:text-ink"
+                aria-label="Instrucciones de descarga"
+                (click)="showDownloadInstructions(model)"
+              >
+                <app-icon name="download" [size]="14" />
+              </button>
+              @if (hfDefaultModelId() !== model.repoId) {
+                <button
+                  type="button"
+                  class="p-1.5 text-muted transition-colors hover:text-ink"
+                  aria-label="Establecer como principal"
+                  (click)="setDefaultHfModel(model.repoId)"
+                >
+                  <app-icon name="star" [size]="14" />
+                </button>
+              }
+              @if (!model.isDefault) {
+                <button
+                  type="button"
+                  class="p-1.5 text-faint transition-colors hover:text-negative"
+                  aria-label="Eliminar de la lista"
+                  (click)="requestHfDelete(model)"
+                >
+                  <app-icon name="trash" [size]="14" />
+                </button>
+              }
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+  </section>
+
+  <footer class="border-t border-line px-5 py-4 sm:px-8">
+    <p class="font-mono text-[9px] uppercase tracking-[0.1em] text-faint">
+      Los modelos se cachean en el navegador. Eliminar un modelo no borra tus conversaciones.
+    </p>
+  </footer>
+
+  <app-sheet [open]="showAddModal()" title="Agregar por ID" eyebrow="MLC-AI registry" (close)="closeAddModal()">
+    <p class="text-[12px] leading-relaxed text-muted">
+      Ingresa el identificador exacto del registro MLC-AI. Debe incluir el sufijo de
+      cuantización, por ejemplo <span class="font-mono text-ink">Llama-3.2-1B-Instruct-q4f32_1-MLC</span>.
+    </p>
+
+    <div class="mt-5">
+      <app-input
+        label="Model ID"
+        placeholder="Llama-3.2-1B-Instruct-q4f32_1-MLC"
+        [(value)]="customModelId"
+      />
+    </div>
+
+    <div class="mt-6 flex justify-end gap-2">
+      <app-button variant="ghost" label="Cancelar" (clicked)="closeAddModal()" />
+      <app-button
+        label="Agregar modelo"
+        icon="plus"
+        iconPosition="left"
+        [disabled]="!customModelId().trim()"
+        (clicked)="addCustomModel()"
+      />
+    </div>
+  </app-sheet>
+
+  <app-sheet
+    [open]="showRegistryModal()"
+    title="Registro MLC-AI"
+    eyebrow="Explorar"
+    size="lg"
+    (close)="closeRegistryModal()"
+  >
+    <app-input
+      label="Filtrar por ID"
+      placeholder="Buscar en el registro…"
+      [(value)]="registryFilter"
+    />
+
+    <div class="mt-4 max-h-[55vh] overflow-y-auto border border-line">
+      @for (modelId of filteredRegistryModels(); track modelId) {
+        <div class="flex items-center justify-between gap-3 border-b border-line px-3 py-2.5 last:border-b-0">
+          <span class="min-w-0 flex-1 truncate font-mono text-[10px] text-graphite">{{ modelId }}</span>
+          <button
+            type="button"
+            class="inline-flex shrink-0 items-center gap-1 border border-line px-2 py-1 font-mono text-[8px] uppercase tracking-[0.1em] text-ink transition-colors hover:border-ink"
+            (click)="addFromRegistry(modelId)"
+          >
+            <app-icon name="plus" [size]="10" />
+            Agregar
+          </button>
+        </div>
+      } @empty {
+        <p class="px-3 py-8 text-center text-[12px] text-muted">No hay coincidencias.</p>
+      }
+    </div>
+  </app-sheet>
+
+  <app-sheet [open]="showHfModal()" title="Agregar modelo HF" eyebrow="Hugging Face" (close)="closeHfModal()">
+    <div class="space-y-5">
+      <div>
+        <app-input label="Repo ID" placeholder="usuario/modelo" [(value)]="hfRepoId" />
+      </div>
+
+      <div class="border-t border-line pt-5">
+        <app-input label="Buscar en el Hub" placeholder="Qwen, Llama, GPT2…" [(value)]="hfSearchQuery" />
+        <app-button
+          class="mt-3"
+          variant="secondary"
+          size="sm"
+          label="Buscar modelos"
+          icon="search"
+          iconPosition="left"
+          [loading]="hfIsLoading()"
+          (clicked)="searchHfModels()"
+        />
+
+        @if (hfSearchError()) {
+          <p class="mt-3 border border-negative/25 bg-negative-soft px-3 py-2 text-[11px] text-negative">
+            {{ hfSearchError() }}
+          </p>
+        }
+
+        @if (hfSearchResults().length > 0) {
+          <div class="mt-3 max-h-56 overflow-y-auto border border-line">
+            @for (result of hfSearchResults(); track result.repoId) {
+              <button
+                type="button"
+                class="flex w-full items-center justify-between gap-3 border-b border-line px-3 py-2.5 text-left transition-colors last:border-b-0 hover:bg-surface"
+                (click)="addHfModelFromSearch(result)"
+              >
+                <span class="min-w-0">
+                  <span class="block truncate text-[12px] font-medium text-ink">{{ result.name }}</span>
+                  <span class="mt-0.5 block truncate font-mono text-[9px] text-faint">{{ result.repoId }}</span>
+                </span>
+                <app-icon name="plus" [size]="13" class="shrink-0 text-muted" />
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="flex justify-end gap-2 border-t border-line pt-4">
+        <app-button variant="ghost" label="Cancelar" (clicked)="closeHfModal()" />
+        <app-button
+          label="Agregar"
+          [disabled]="!hfRepoId().trim()"
+          (clicked)="addHfModel()"
+        />
+      </div>
+    </div>
+  </app-sheet>
+
+  <app-sheet
+    [open]="showHfDownloadModal() && !!selectedHfModel()"
+    [title]="selectedHfModel()?.name ?? 'Descargar'"
+    eyebrow="Hugging Face"
+    (close)="closeHfDownloadModal()"
+  >
+    @if (selectedHfModel(); as hfModel) {
+      <div class="space-y-5">
+        <div>
+          <div class="mb-2 flex items-center justify-between">
+            <p class="label-mono">Git clone</p>
+            <button
+              type="button"
+              class="inline-flex items-center gap-1 font-mono text-[9px] uppercase tracking-[0.1em] text-muted hover:text-ink"
+              (click)="copy(getCloneCommand(hfModel.repoId), 'Comando')"
+            >
+              <app-icon name="copy" [size]="11" />
+              Copiar
+            </button>
+          </div>
+          <code class="block overflow-x-auto border border-line bg-[#eeeee8] p-3 font-mono text-[10px] text-graphite">
+            {{ getCloneCommand(hfModel.repoId) }}
+          </code>
+        </div>
+
+        <div>
+          <div class="mb-2 flex items-center justify-between">
+            <p class="label-mono">Python · huggingface_hub</p>
+            <button
+              type="button"
+              class="inline-flex items-center gap-1 font-mono text-[9px] uppercase tracking-[0.1em] text-muted hover:text-ink"
+              (click)="copy(getPythonCode(hfModel.repoId), 'Código')"
+            >
+              <app-icon name="copy" [size]="11" />
+              Copiar
+            </button>
+          </div>
+          <pre class="overflow-x-auto border border-line bg-[#eeeee8] p-3 font-mono text-[10px] leading-relaxed text-graphite">{{ getPythonCode(hfModel.repoId) }}</pre>
+        </div>
+
+        <div>
+          <p class="label-mono mb-2">Repositorio</p>
+          <a
+            [href]="getModelUrl(hfModel.repoId)"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center gap-1.5 font-mono text-[10px] text-accent hover:underline"
+          >
+            {{ getModelUrl(hfModel.repoId) }}
+            <app-icon name="arrow-up-right" [size]="11" />
+          </a>
+        </div>
+
+        <div class="border-t border-line pt-4">
+          <app-button variant="secondary" label="Cerrar" (clicked)="closeHfDownloadModal()" />
+        </div>
+      </div>
+    }
+  </app-sheet>
+
+  <app-dialog
+    [open]="!!pendingDelete()"
+    title="Eliminar modelo"
+    (close)="pendingDelete.set(null)"
+  >
+    @if (pendingDelete(); as model) {
+      <p>
+        Se eliminarán los pesos de <span class="font-medium text-ink">{{ model.name }}</span> de la
+        caché del navegador. Tendrás que descargarlo de nuevo para usarlo.
+      </p>
+    }
+    <div footer class="flex gap-2">
+      <app-button variant="ghost" label="Cancelar" (clicked)="pendingDelete.set(null)" />
+      <app-button
+        variant="danger"
+        label="Eliminar"
+        icon="trash"
+        iconPosition="left"
+        [loading]="!!isDeleting()"
+        (clicked)="confirmDelete()"
+      />
+    </div>
+  </app-dialog>
+
+  <app-dialog
+    [open]="!!pendingHfDelete()"
+    title="Quitar de la lista"
+    (close)="pendingHfDelete.set(null)"
+  >
+    @if (pendingHfDelete(); as model) {
+      <p>
+        <span class="font-medium text-ink">{{ model.name }}</span> se quitará de la lista de modelos
+        externos. Los archivos descargados no se modifican.
+      </p>
+    }
+    <div footer class="flex gap-2">
+      <app-button variant="ghost" label="Cancelar" (clicked)="pendingHfDelete.set(null)" />
+      <app-button variant="danger" label="Quitar" (clicked)="confirmHfDelete()" />
+    </div>
+  </app-dialog>
+
+  @if (notice()) {
+    <div class="animate-fade fixed bottom-5 left-1/2 z-[60] -translate-x-1/2">
+      <div class="flex items-center gap-2 border border-ink bg-ink px-4 py-2.5 text-paper shadow-float">
+        <span class="h-1.5 w-1.5 rounded-full bg-positive"></span>
+        <span class="font-mono text-[10px] uppercase tracking-[0.08em]">{{ notice() }}</span>
+      </div>
+    </div>
+  }
+</div>

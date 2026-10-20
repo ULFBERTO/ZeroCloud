@@ -1,22 +1,35 @@
-import { Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { IconComponent, IconName } from './icon.component';
+
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'link';
+export type ButtonSize = 'sm' | 'md' | 'lg' | 'icon';
 
 @Component({
   selector: 'app-button',
   standalone: true,
-  imports: [],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [IconComponent],
   template: `
     <button
-      type="{{ type() }}"
-      (click)="clicked.emit()"
-      [disabled]="disabled()"
-      class="inline-flex items-center justify-center whitespace-nowrap rounded-xl text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed"
-      [class]="variantClass()"
-      [style.height.px]="size() === 'sm' ? 32 : size() === 'lg' ? 44 : 40"
-      [style.min-width.px]="size() === 'sm' ? 80 : size() === 'lg' ? 120 : 100"
+      [type]="type()"
+      [disabled]="disabled() || loading()"
+      [attr.aria-label]="ariaLabel() || null"
+      [attr.aria-busy]="loading() ? 'true' : null"
+      [class]="classes()"
+      (click)="handleClick()"
     >
-      <span [class]="loading() ? 'opacity-50' : 'opacity-100'">{{ label() }}</span>
       @if (loading()) {
-        <span class="ml-2 flex h-3 w-3"><svg class="animate-spin h-3 w-3 text-current" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg></span>
+        <span class="h-3 w-3 animate-spin rounded-full border border-current border-t-transparent"></span>
+      } @else if (icon() && iconPosition() === 'left') {
+        <app-icon [name]="icon()!" [size]="iconSize()" />
+      }
+
+      @if (label()) {
+        <span class="truncate">{{ label() }}</span>
+      }
+
+      @if (!loading() && icon() && iconPosition() === 'right') {
+        <app-icon [name]="icon()!" [size]="iconSize()" />
       }
     </button>
   `,
@@ -26,25 +39,41 @@ export class ButtonComponent {
   readonly type = input<'button' | 'submit' | 'reset'>('button');
   readonly disabled = input<boolean>(false);
   readonly loading = input<boolean>(false);
+  readonly fullWidth = input<boolean>(false);
+  readonly variant = input<ButtonVariant>('primary');
+  readonly size = input<ButtonSize>('md');
+  readonly icon = input<IconName | null>(null);
+  readonly iconPosition = input<'left' | 'right'>('right');
+  readonly ariaLabel = input<string>('');
+
   readonly clicked = output<void>();
 
-  readonly variant = input<'primary' | 'secondary' | 'ghost' | 'danger' | 'outline'>('primary');
-  readonly size = input<'sm' | 'md' | 'lg'>('md');
+  readonly iconSize = computed(() => (this.size() === 'sm' ? 14 : 16));
 
-  variantClass(): string {
-    switch (this.variant()) {
-      case 'primary':
-        return 'bg-indigo-600 text-slate-100 hover:bg-indigo-500 active:bg-indigo-700 shadow-md shadow-indigo-500/25';
-      case 'secondary':
-        return 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700';
-      case 'ghost':
-        return 'bg-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200';
-      case 'danger':
-        return 'bg-red-600 text-slate-100 hover:bg-red-500 active:bg-red-700';
-      case 'outline':
-        return 'border border-slate-600 bg-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200';
-      default:
-        return 'bg-indigo-600 text-slate-100';
-    }
+  readonly classes = computed(() => {
+    const base =
+      'inline-flex select-none items-center justify-center gap-2 rounded-[3px] font-medium leading-none transition-colors duration-150 disabled:pointer-events-none disabled:opacity-40';
+    const sizes: Record<ButtonSize, string> = {
+      sm: 'h-8 px-3 text-[11px]',
+      md: 'h-10 px-4 text-[13px]',
+      lg: 'h-12 px-5 text-sm',
+      icon: 'h-9 w-9 p-0',
+    };
+    const variants: Record<ButtonVariant, string> = {
+      primary: 'bg-ink text-paper hover:bg-graphite',
+      secondary: 'border border-line bg-surface text-ink hover:border-line-strong hover:bg-[#efefe9]',
+      outline: 'border border-ink bg-transparent text-ink hover:bg-ink hover:text-paper',
+      ghost: 'text-muted hover:bg-ink/5 hover:text-ink',
+      danger: 'border border-negative/25 bg-negative-soft text-negative hover:bg-negative hover:text-white',
+      link: 'h-auto px-0 text-accent hover:underline underline-offset-4',
+    };
+    return [base, sizes[this.size()], variants[this.variant()], this.fullWidth() ? 'w-full' : ''].join(
+      ' ',
+    );
+  });
+
+  handleClick(): void {
+    if (this.disabled() || this.loading()) return;
+    this.clicked.emit();
   }
 }

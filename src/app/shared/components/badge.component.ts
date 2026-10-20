@@ -1,28 +1,50 @@
-import { Component, input } from '@angular/core';
+﻿import { ChangeDetectionStrategy, Component, booleanAttribute, computed, input } from '@angular/core';
+
+export type BadgeVariant = 'neutral' | 'success' | 'warning' | 'error' | 'info' | 'ink' | 'outline';
 
 @Component({
   selector: 'app-badge',
   standalone: true,
-  imports: [],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors"
-      [class]="variantClass()">
+    <span [class]="classes()">
+      @if (dot()) {
+        <span [class]="dotClass()"></span>
+      }
       {{ label() }}
     </span>
   `,
 })
 export class BadgeComponent {
   readonly label = input<string>('');
-  readonly variant = input<'default' | 'success' | 'warning' | 'error' | 'info' | 'neutral'>('neutral');
+  readonly variant = input<BadgeVariant>('neutral');
+  readonly dot = input(false, { transform: booleanAttribute });
 
-  variantClass(): string {
-    switch (this.variant()) {
-      case 'success': return 'border-green-500/30 bg-green-500/10 text-green-400';
-      case 'warning': return 'border-amber-500/30 bg-amber-500/10 text-amber-400';
-      case 'error': return 'border-red-500/30 bg-red-500/10 text-red-400';
-      case 'info': return 'border-indigo-500/30 bg-indigo-500/10 text-indigo-400';
-      case 'neutral': return 'border-slate-600 bg-slate-800 text-slate-400';
-      default: return 'border-slate-600 bg-slate-800 text-slate-400';
-    }
-  }
+  readonly classes = computed(() => {
+    const base =
+      'inline-flex items-center gap-1.5 rounded-[2px] border px-2 py-[3px] font-mono text-[9px] font-medium uppercase tracking-[0.12em] leading-none';
+    const variants: Record<BadgeVariant, string> = {
+      neutral: 'border-line bg-surface text-muted',
+      success: 'border-positive/25 bg-positive-soft text-positive',
+      warning: 'border-warning/25 bg-warning-soft text-warning',
+      error: 'border-negative/25 bg-negative-soft text-negative',
+      info: 'border-accent/20 bg-accent-soft text-accent',
+      ink: 'border-ink bg-ink text-paper',
+      outline: 'border-line-strong bg-transparent text-graphite',
+    };
+    return [base, variants[this.variant()]].join(' ');
+  });
+
+  readonly dotClass = computed(() => {
+    const colors: Record<BadgeVariant, string> = {
+      neutral: 'bg-faint',
+      success: 'bg-positive',
+      warning: 'bg-warning',
+      error: 'bg-negative',
+      info: 'bg-accent',
+      ink: 'bg-paper',
+      outline: 'bg-graphite',
+    };
+    return `h-1 w-1 rounded-full ${colors[this.variant()]}`;
+  });
 }

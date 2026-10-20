@@ -1,17 +1,19 @@
-import { Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 @Component({
   selector: 'app-avatar',
   standalone: true,
-  imports: [],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="flex-shrink-0 rounded-full overflow-hidden"
+    <div
+      class="shrink-0 overflow-hidden rounded-full border border-line-strong bg-ink text-paper"
       [style.width.px]="size()"
-      [style.height.px]="size()">
+      [style.height.px]="size()"
+    >
       @if (src()) {
-        <img [src]="src()" [alt]="label()" class="w-full h-full object-cover" />
+        <img [src]="src()" [alt]="label()" class="h-full w-full object-cover" />
       } @else {
-        <div class="w-full h-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-slate-900 font-bold text-xs uppercase tracking-wider">
+        <div class="flex h-full w-full items-center justify-center font-mono text-[10px] font-medium uppercase tracking-wider">
           {{ initials() }}
         </div>
       }
@@ -22,6 +24,5 @@ export class AvatarComponent {
   readonly src = input<string | null>(null);
   readonly label = input<string>('');
   readonly size = input<number>(32);
-
   readonly initials = input<string>('?');
 }

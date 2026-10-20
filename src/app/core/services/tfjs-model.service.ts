@@ -1,4 +1,5 @@
 import { Injectable, signal } from '@angular/core';
+import { readStorage, writeStorage } from '../utils/storage';
 
 export interface TFJSModelConfig {
   repoId: string;
@@ -63,7 +64,7 @@ export class TFJSModelService {
 
   private readonly _models = signal<TFJSModelConfig[]>([...DEFAULT_MODELS]);
   private readonly _selectedModelId = signal<string>(
-    localStorage.getItem(DEFAULT_MODEL_KEY) || DEFAULT_MODELS[0].repoId
+    readStorage(DEFAULT_MODEL_KEY) ?? DEFAULT_MODELS[0].repoId
   );
   private readonly _generatedText = signal<string>('');
 
@@ -88,7 +89,7 @@ export class TFJSModelService {
       modelConfig = this._models()[0];
       if (modelConfig) {
         this._selectedModelId.set(modelConfig.repoId);
-        localStorage.setItem(DEFAULT_MODEL_KEY, modelConfig.repoId);
+        writeStorage(DEFAULT_MODEL_KEY, modelConfig.repoId);
       }
     }
 
@@ -155,7 +156,7 @@ export class TFJSModelService {
 
       this.currentModelId = targetId;
       this._selectedModelId.set(targetId);
-      localStorage.setItem(DEFAULT_MODEL_KEY, targetId);
+      writeStorage(DEFAULT_MODEL_KEY, targetId);
 
       this._state.set({
         isLoading: false,

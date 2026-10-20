@@ -1,42 +1,59 @@
 import {
-  Component,
-  inject,
-  signal,
-  computed,
-  ViewChild,
-  ElementRef,
   AfterViewChecked,
-  OnInit,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  inject,
   OnDestroy,
+  OnInit,
+  signal,
+  ViewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import {
-  ChatBackendInterface,
-  ChatMessage,
-} from '../../core/interfaces/chat-backend.interface';
-import { WebLLMService } from '../../core/services/webllm.service';
-import { ModelManagerService } from '../../core/services/model-manager.service';
-import { ChatHistoryService } from '../../core/services/chat-history.service';
-import { P2PSyncService } from '../../core/services/p2p-sync.service';
-import { GPUClusterService } from '../../core/services/gpu-cluster.service';
+import { Router, RouterLink } from '@angular/router';
+import { ChatBackendInterface, ChatMessage } from '../../core/interfaces/chat-backend.interface';
+import { ChatHistoryService, ChatSession } from '../../core/services/chat-history.service';
 import { DistributedInferenceService } from '../../core/services/distributed-inference.service';
+import { GPUClusterService } from '../../core/services/gpu-cluster.service';
+import { ModelManagerService } from '../../core/services/model-manager.service';
+import { P2PSyncService } from '../../core/services/p2p-sync.service';
 import { SSMWebGPUService } from '../../core/services/ssm-webgpu.service';
-import { SyncModalComponent } from './sync-modal/sync-modal.component';
+import { WebLLMService } from '../../core/services/webllm.service';
+import { copyText } from '../../core/utils/clipboard';
+import { formatRelativeTime } from '../../core/utils/format';
+import {
+  BadgeComponent,
+  ButtonComponent,
+  DialogComponent,
+  IconComponent,
+  SheetComponent,
+} from '../../shared/components';
 import { ClusterPanelComponent } from './cluster-panel/cluster-panel.component';
-import { SheetComponent } from '../../shared/components';
+import { SyncModalComponent } from './sync-modal/sync-modal.component';
 
 @Component({
   selector: 'app-chat',
   standalone: true,
-  imports: [FormsModule, SyncModalComponent, ClusterPanelComponent, SheetComponent],
-  providers: [
-    { provide: ChatBackendInterface, useClass: WebLLMService },
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [
+    FormsModule,
+    RouterLink,
+    SyncModalComponent,
+    ClusterPanelComponent,
+    SheetComponent,
+    ButtonComponent,
+    BadgeComponent,
+    IconComponent,
+    DialogComponent,
   ],
+  providers: [{ provide: ChatBackendInterface, useClass: WebLLMService }],
   templateUrl: './chat.component.html',
 })
 export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
-  @ViewChild('messagesContainer') private messagesContainer!: ElementRef;
+  @ViewChild('messagesContainer') private messagesContainer?: ElementRef<HTMLElement>;
+  @ViewChild('composerInput') private composerInput?: ElementRef<HTMLTextAreaElement>;
 
   private readonly chatBackend = inject(ChatBackendInterface);
   private readonly webllmService = inject(WebLLMService);
@@ -49,17 +66,17 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
   private readonly router = inject(Router);
 
   readonly selectedModel = this.modelManager.selectedModel;
+  readonly selectedModelId = this.modelManager.selectedModelId;
   readonly sessions = this.chatHistory.sortedSessions;
   readonly activeSession = this.chatHistory.activeSession;
 
-  // Detectar si es modelo SSM
-  readonly isSSMModel = computed(() => 
-    this.modelManager.selectedModelId().includes('OxideLLM_TK_SSM')
+  readonly isSSMModel = computed(() =>
+    this.selectedModelId().includes('OxideLLM_TK_SSM'),
   );
 
-  // GPU selection
   readonly availableGPUs = this.webllmService.availableGPUs;
   readonly selectedGPU = this.webllmService.selectedGPU;
+  readonly supportsF16 = this.webllmService.supportsF16;
   readonly showGPUSelector = signal(false);
 
   readonly state = computed(() => {
@@ -70,218 +87,134 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
         isLoading: ssmState.isLoading,
         isGenerating: this._isSSMGenerating(),
         error: ssmState.error,
-        loadingProgress: ssmState.isLoading ? { progress: ssmState.progress, text: ssmState.progressText || 'Cargando SSM...' } : null,
+        loadingProgress: ssmState.isLoading
+          ? { progress: ssmState.progress, text: ssmState.progressText || 'Cargando SSM…' }
+          : null,
       };
     }
     return this.chatBackend.state();
   });
-  readonly currentResponse = computed(() => {
-    if (this.isSSMModel()) {
-      return this.ssmService.generatedText();
-    }
-    return this.chatBackend.currentResponse();
-  });
+
+  readonly currentResponse = computed(() =>
+    this.isSSMModel() ? this.ssmService.generatedText() : this.chatBackend.currentResponse(),
+  );
+
   readonly messages = signal<ChatMessage[]>([]);
   readonly userInput = signal<string>('');
 
-  // UI state
-  readonly showSidebar = signal(true);
+  readonly showSidebar = signal(
+    typeof window === 'undefined' || window.matchMedia('(min-width: 768px)').matches,
+  );
   readonly editingMessageIndex = signal<number | null>(null);
   readonly editingContent = signal<string>('');
   readonly showSyncModal = signal(false);
-  private readonly _isSSMGenerating = signal(false);
+  readonly showClearConfirm = signal(false);
+  readonly pendingSessionDelete = signal<string | null>(null);
+  readonly copiedIndex = signal<number | null>(null);
 
-  // P2P state
+  private readonly _isSSMGenerating = signal(false);
+  private userScrolledUp = false;
+
   readonly isP2PConnected = this.p2pSync.isConnected;
   readonly connectedPeersCount = computed(() => this.p2pSync.connectedPeers().length);
 
-  // GPU Cluster state
   readonly showClusterPanel = signal(false);
   readonly isClusterActive = computed(() => this.gpuCluster.localNode() !== null);
   readonly canUseDistributed = this.distributedInference.canUseDistributed;
 
-  private p2pTaskHandler = ((event: Event) => this.handleP2PTask(event as CustomEvent)) as EventListener;
+  private readonly p2pTaskHandler = ((event: Event) =>
+    this.handleP2PTask(event as CustomEvent)) as EventListener;
+
+  private lastLoadedSessionId = this.activeSession()?.id ?? null;
+
+  constructor() {
+    effect(() => {
+      const session = this.chatHistory.activeSession();
+      if (!session || session.id === this.lastLoadedSessionId) return;
+
+      this.lastLoadedSessionId = session.id;
+      this.messages.set([...session.messages]);
+      this.chatBackend.resetChat();
+      this.userScrolledUp = false;
+    });
+  }
 
   readonly canSend = computed(
     () =>
       this.state().isInitialized &&
       !this.state().isGenerating &&
-      this.userInput().trim().length > 0
+      this.userInput().trim().length > 0,
   );
 
+  readonly canStop = computed(() => this.state().isGenerating && !this.isSSMModel());
+
+  readonly suggestions = [
+    'Explícame cómo funciona WebGPU en este proyecto.',
+    'Resume las ventajas de un modelo state-space frente a un transformer.',
+    'Escribe un plan de pruebas para la inferencia distribuida P2P.',
+  ];
+
   readonly displayMessages = computed(() => {
-    const msgs = [...this.messages()];
+    const messages = [...this.messages()];
     const streaming = this.currentResponse();
     if (this.state().isGenerating && streaming) {
-      msgs.push({
-        role: 'assistant',
-        content: streaming,
-        timestamp: new Date(),
-      });
+      messages.push({ role: 'assistant', content: streaming, timestamp: new Date() });
     }
-    return msgs;
+    return messages;
   });
 
   ngOnInit(): void {
-    // Cargar sesión activa si existe
     const session = this.activeSession();
     if (session) {
       this.messages.set([...session.messages]);
     }
 
-    // Detectar GPUs disponibles
-    this.webllmService.detectAvailableGPUs();
-
-    // Escuchar tareas P2P
+    void this.webllmService.detectAvailableGPUs();
     window.addEventListener('p2p-inference-task', this.p2pTaskHandler);
-  }
-
-  onGPUChange(gpuId: string): void {
-    this.webllmService.selectGPU(gpuId);
-    this.showGPUSelector.set(false);
-  }
-
-  toggleGPUSelector(): void {
-    this.showGPUSelector.update(v => !v);
-  }
-
-  async clearCacheAndRetry(): Promise<void> {
-    await this.webllmService.clearModelCache();
-    await this.initializeModel();
   }
 
   ngOnDestroy(): void {
     window.removeEventListener('p2p-inference-task', this.p2pTaskHandler);
   }
 
-  private async handleP2PTask(event: CustomEvent): Promise<void> {
-    if (!this.state().isInitialized) return;
-
-    const { taskId, prompt, fromId } = event.detail;
-
-    try {
-      const response = await this.chatBackend.sendMessage(prompt, []);
-      this.p2pSync.sendInferenceResult(taskId, fromId, response);
-    } catch (error) {
-      console.error('P2P inference error:', error);
-    }
-  }
-
   ngAfterViewChecked(): void {
     this.scrollToBottom();
   }
 
-  async initializeModel(): Promise<void> {
-    try {
-      if (this.isSSMModel()) {
-        await this.ssmService.loadModel();
-      } else {
-        await this.chatBackend.initialize();
-      }
-      // Crear nueva sesión si no hay una activa
-      if (!this.activeSession()) {
-        this.createNewChat();
-      }
-    } catch (error) {
-      console.error('Error initializing model:', error);
-    }
+  onMessagesScroll(event: Event): void {
+    const element = event.target as HTMLElement;
+    const distance = element.scrollHeight - element.scrollTop - element.clientHeight;
+    this.userScrolledUp = distance > 96;
   }
 
-  async sendMessage(): Promise<void> {
-    const content = this.userInput().trim();
-    if (!content || !this.canSend()) return;
-
-    // Asegurar que hay una sesión activa
-    if (!this.activeSession()) {
-      this.createNewChat();
-    }
-
-    const userMessage: ChatMessage = {
-      role: 'user',
-      content,
-      timestamp: new Date(),
-    };
-
-    this.messages.update((msgs) => [...msgs, userMessage]);
-    this.userInput.set('');
-
-    try {
-      let response: string;
-
-      if (this.isSSMModel()) {
-        // Usar modelo SSM JS
-        this._isSSMGenerating.set(true);
-        response = await this.ssmService.generate(content, 150, 0.8);
-        this._isSSMGenerating.set(false);
-      } else {
-        const history = this.messages().filter((m) => m.role !== 'system');
-        
-        // Determinar modo de inferencia
-        const isHost = this.p2pSync.connectionMode() === 'hosting';
-        const hasPeers = this.p2pSync.connectedPeers().length > 0;
-        const useDistributedGPU = this.canUseDistributed();
-        
-        if (useDistributedGPU) {
-          response = await this.distributedInference.runWithFallback(content);
-        } else if (isHost && hasPeers) {
-          response = await this.sendDistributedMessage(content, history.slice(0, -1));
-        } else {
-          response = await this.chatBackend.sendMessage(content, history.slice(0, -1));
-        }
-      }
-
-      const assistantMessage: ChatMessage = {
-        role: 'assistant',
-        content: response,
-        timestamp: new Date(),
-      };
-
-      this.messages.update((msgs) => [...msgs, assistantMessage]);
-
-      // Guardar en historial
-      const sessionId = this.activeSession()?.id;
-      if (sessionId) {
-        this.chatHistory.updateSessionMessages(sessionId, this.messages());
-      }
-    } catch (error) {
-      console.error('Error sending message:', error);
-      this._isSSMGenerating.set(false);
-    }
+  formatTime(value: Date): string {
+    return new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit' }).format(
+      new Date(value),
+    );
   }
 
-  private async sendDistributedMessage(content: string, history: ChatMessage[]): Promise<string> {
-    return new Promise((resolve) => {
-      // Enviar tarea a los peers
-      const taskId = this.p2pSync.sendInferenceTask(content);
-      
-      // Escuchar resultado
-      const resultHandler = (event: Event) => {
-        const detail = (event as CustomEvent).detail;
-        if (detail.taskId === taskId) {
-          window.removeEventListener('p2p-inference-result', resultHandler);
-          resolve(detail.result);
-        }
-      };
-      
-      window.addEventListener('p2p-inference-result', resultHandler);
-      
-      // Timeout de 60 segundos - si no hay respuesta, procesar localmente
-      setTimeout(async () => {
-        window.removeEventListener('p2p-inference-result', resultHandler);
-        console.log('P2P timeout, processing locally...');
-        const localResponse = await this.chatBackend.sendMessage(content, history);
-        resolve(localResponse);
-      }, 60000);
-    });
+  p2pButtonClass(): string {
+    const base =
+      'inline-flex h-8 items-center gap-1.5 border px-2.5 font-mono text-[9px] uppercase tracking-[0.1em] transition-colors';
+    return this.isP2PConnected()
+      ? `${base} border-positive/30 bg-positive-soft text-positive`
+      : `${base} border-line text-muted hover:border-ink hover:text-ink`;
   }
 
-  stopGeneration(): void {
-    this.chatBackend.abortGeneration();
+  clusterButtonClass(): string {
+    const base =
+      'inline-flex h-8 items-center gap-1.5 border px-2.5 font-mono text-[9px] uppercase tracking-[0.1em] transition-colors';
+    return this.isClusterActive()
+      ? `${base} border-ink bg-ink text-paper`
+      : `${base} border-line text-muted hover:border-ink hover:text-ink`;
   }
 
-  clearChat(): void {
-    this.messages.set([]);
-    this.chatBackend.resetChat();
+  sessionTime(value: Date): string {
+    return formatRelativeTime(value);
+  }
+
+  toggleSidebar(): void {
+    this.showSidebar.update((open) => !open);
   }
 
   goToDashboard(): void {
@@ -297,55 +230,180 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
   }
 
   toggleClusterPanel(): void {
-    this.showClusterPanel.update(v => !v);
+    this.showClusterPanel.update((open) => !open);
   }
 
-  onKeyDown(event: KeyboardEvent): void {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
-      this.sendMessage();
+  toggleGPUSelector(): void {
+    this.showGPUSelector.update((open) => !open);
+  }
+
+  onGPUChange(gpuId: string): void {
+    this.webllmService.selectGPU(gpuId);
+    this.showGPUSelector.set(false);
+  }
+
+  async initializeModel(): Promise<void> {
+    try {
+      if (this.isSSMModel()) {
+        await this.ssmService.loadModel();
+      } else {
+        await this.chatBackend.initialize();
+      }
+
+      if (!this.activeSession()) {
+        this.createNewChat();
+      }
+    } catch (error) {
+      console.error('Error initializing model:', error);
     }
   }
 
-  // === Historial ===
+  async clearCacheAndRetry(): Promise<void> {
+    await this.webllmService.clearModelCache();
+    await this.initializeModel();
+  }
 
-  toggleSidebar(): void {
-    this.showSidebar.update((v) => !v);
+  async sendMessage(): Promise<void> {
+    const content = this.userInput().trim();
+    if (!content || !this.canSend()) return;
+
+    if (!this.activeSession()) {
+      this.createNewChat();
+    }
+
+    const userMessage: ChatMessage = {
+      role: 'user',
+      content,
+      timestamp: new Date(),
+    };
+
+    this.messages.update((messages) => [...messages, userMessage]);
+    this.userInput.set('');
+    this.userScrolledUp = false;
+
+    const sessionId = this.activeSession()?.id;
+    if (sessionId) {
+      this.chatHistory.updateSessionMessages(sessionId, this.messages());
+    }
+
+    try {
+      let response: string;
+
+      if (this.isSSMModel()) {
+        this._isSSMGenerating.set(true);
+        try {
+          response = await this.ssmService.generate(content, 150, 0.8);
+        } finally {
+          this._isSSMGenerating.set(false);
+        }
+      } else {
+        const history = this.messages().filter((message) => message.role !== 'system');
+        const isHost = this.p2pSync.connectionMode() === 'hosting';
+        const hasPeers = this.p2pSync.connectedPeers().length > 0;
+
+        if (this.canUseDistributed()) {
+          response = await this.distributedInference.runWithFallback(content);
+        } else if (isHost && hasPeers) {
+          response = await this.sendDistributedMessage(content, history.slice(0, -1));
+        } else {
+          response = await this.chatBackend.sendMessage(content, history.slice(0, -1));
+        }
+      }
+
+      const assistantMessage: ChatMessage = {
+        role: 'assistant',
+        content: response,
+        timestamp: new Date(),
+      };
+
+      if (this.activeSession()?.id === sessionId) {
+        this.messages.update((messages) => [...messages, assistantMessage]);
+        if (sessionId) {
+          this.chatHistory.updateSessionMessages(sessionId, this.messages());
+        }
+      } else if (sessionId) {
+        const session = this.sessions().find((item) => item.id === sessionId);
+        if (session) {
+          this.chatHistory.updateSessionMessages(sessionId, [...session.messages, assistantMessage]);
+        }
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      this._isSSMGenerating.set(false);
+    }
+  }
+
+  stopGeneration(): void {
+    this.chatBackend.abortGeneration();
+  }
+
+  useSuggestion(suggestion: string): void {
+    this.userInput.set(suggestion);
+    queueMicrotask(() => this.composerInput?.nativeElement.focus());
+  }
+
+  onKeyDown(event: KeyboardEvent): void {
+    if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+      event.preventDefault();
+      void this.sendMessage();
+    }
+  }
+
+  requestClearChat(): void {
+    if (this.messages().length === 0) return;
+    this.showClearConfirm.set(true);
+  }
+
+  clearChat(): void {
+    const sessionId = this.activeSession()?.id;
+    if (sessionId) {
+      this.chatHistory.clearSessionMessages(sessionId);
+    }
+    this.messages.set([]);
+    this.chatBackend.resetChat();
+    this.showClearConfirm.set(false);
   }
 
   createNewChat(): void {
-    const modelId = this.modelManager.selectedModelId();
-    this.chatHistory.createSession(modelId);
+    const session = this.chatHistory.createSession(this.selectedModelId());
+    this.lastLoadedSessionId = session.id;
     this.messages.set([]);
     this.chatBackend.resetChat();
+    this.userScrolledUp = false;
   }
 
   loadSession(sessionId: string): void {
     this.chatHistory.setActiveSession(sessionId);
-    const session = this.chatHistory.activeSession();
-    if (session) {
-      this.messages.set([...session.messages]);
-      this.chatBackend.resetChat();
-    }
   }
 
-  deleteSession(sessionId: string, event: Event): void {
+  requestDeleteSession(sessionId: string, event: Event): void {
     event.stopPropagation();
-    if (confirm('¿Eliminar esta conversación?')) {
-      this.chatHistory.deleteSession(sessionId);
-      if (this.activeSession()?.id === sessionId) {
-        this.messages.set([]);
-      }
-    }
+    this.pendingSessionDelete.set(sessionId);
   }
 
-  // === Edición de mensajes ===
+  confirmDeleteSession(): void {
+    const sessionId = this.pendingSessionDelete();
+    if (!sessionId) return;
+
+    this.chatHistory.deleteSession(sessionId);
+    if (this.lastLoadedSessionId === sessionId) {
+      const nextSession = this.activeSession();
+      this.lastLoadedSessionId = nextSession?.id ?? null;
+      this.messages.set(nextSession ? [...nextSession.messages] : []);
+    }
+    this.pendingSessionDelete.set(null);
+  }
+
+  sessionToDelete(): ChatSession | undefined {
+    const sessionId = this.pendingSessionDelete();
+    return this.sessions().find((session) => session.id === sessionId);
+  }
 
   startEditMessage(index: number): void {
-    const msg = this.messages()[index];
-    if (msg.role !== 'user') return;
+    const message = this.messages()[index];
+    if (message.role !== 'user') return;
     this.editingMessageIndex.set(index);
-    this.editingContent.set(msg.content);
+    this.editingContent.set(message.content);
   }
 
   cancelEdit(): void {
@@ -363,15 +421,13 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
     const newContent = this.editingContent().trim();
     if (!newContent) return;
 
-    // Editar mensaje y cortar historial
     const newMessages = this.chatHistory.editMessageAt(sessionId, index, newContent);
     this.messages.set(newMessages);
     this.cancelEdit();
 
-    // Regenerar respuesta
     this.chatBackend.resetChat();
     try {
-      const history = newMessages.filter((m) => m.role !== 'system');
+      const history = newMessages.filter((message) => message.role !== 'system');
       const response = await this.chatBackend.sendMessage(newContent, history.slice(0, -1));
 
       const assistantMessage: ChatMessage = {
@@ -380,27 +436,90 @@ export class ChatComponent implements AfterViewChecked, OnInit, OnDestroy {
         timestamp: new Date(),
       };
 
-      this.messages.update((msgs) => [...msgs, assistantMessage]);
-      this.chatHistory.updateSessionMessages(sessionId, this.messages());
+      if (this.activeSession()?.id === sessionId) {
+        this.messages.update((messages) => [...messages, assistantMessage]);
+        this.chatHistory.updateSessionMessages(sessionId, this.messages());
+      } else {
+        const session = this.sessions().find((item) => item.id === sessionId);
+        if (session) {
+          this.chatHistory.updateSessionMessages(sessionId, [...session.messages, assistantMessage]);
+        }
+      }
     } catch (error) {
       console.error('Error regenerating:', error);
     }
   }
 
-  // Fork desde un punto específico
   forkFromHere(index: number): void {
     const sessionId = this.activeSession()?.id;
     if (!sessionId) return;
 
     const newSession = this.chatHistory.forkFromMessage(sessionId, index);
+    this.lastLoadedSessionId = newSession.id;
     this.messages.set([...newSession.messages]);
     this.chatBackend.resetChat();
   }
 
-  private scrollToBottom(): void {
+  async copyMessage(index: number, content: string): Promise<void> {
+    if (!(await copyText(content))) return;
+    this.copiedIndex.set(index);
+    window.setTimeout(() => this.copiedIndex.set(null), 1600);
+  }
+
+  private async handleP2PTask(event: CustomEvent): Promise<void> {
+    if (!this.state().isInitialized || this.isSSMModel()) return;
+    const { taskId, prompt, fromId } = event.detail;
+
     try {
-      const el = this.messagesContainer?.nativeElement;
-      if (el) el.scrollTop = el.scrollHeight;
-    } catch {}
+      const response = await this.chatBackend.sendMessage(prompt, []);
+      this.p2pSync.sendInferenceResult(taskId, fromId, response);
+    } catch (error) {
+      console.error('P2P inference error:', error);
+    }
+  }
+
+  private async sendDistributedMessage(
+    content: string,
+    history: ChatMessage[],
+  ): Promise<string> {
+    return new Promise((resolve) => {
+      let settled = false;
+      let timeoutId: number | null = null;
+
+      const finish = (result: string): void => {
+        if (settled) return;
+        settled = true;
+        if (timeoutId !== null) window.clearTimeout(timeoutId);
+        window.removeEventListener('p2p-inference-result', resultHandler);
+        resolve(result);
+      };
+
+      const taskId = this.p2pSync.sendInferenceTask(content);
+
+      const resultHandler = (event: Event): void => {
+        const detail = (event as CustomEvent).detail;
+        if (detail.taskId === taskId) {
+          finish(detail.result);
+        }
+      };
+
+      window.addEventListener('p2p-inference-result', resultHandler);
+
+      timeoutId = window.setTimeout(async () => {
+        try {
+          finish(await this.chatBackend.sendMessage(content, history));
+        } catch (error) {
+          finish(error instanceof Error ? error.message : 'Error de inferencia distribuida.');
+        }
+      }, 60_000);
+    });
+  }
+
+  private scrollToBottom(): void {
+    if (this.userScrolledUp) return;
+    const element = this.messagesContainer?.nativeElement;
+    if (element) {
+      element.scrollTop = element.scrollHeight;
+    }
   }
 }

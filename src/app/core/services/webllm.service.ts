@@ -10,6 +10,7 @@ import {
   ChatCompletionMessageParam,
 } from '@mlc-ai/web-llm';
 import { ModelManagerService } from './model-manager.service';
+import { readStorage, writeStorage } from '../utils/storage';
 
 export interface GPUInfo {
   id: string;
@@ -40,10 +41,10 @@ export class WebLLMService extends ChatBackendInterface {
   private readonly _currentResponse = signal<string>('');
   private readonly _availableGPUs = signal<GPUInfo[]>([]);
   private readonly _selectedGPU = signal<string>(
-    localStorage.getItem(GPU_PREFERENCE_KEY) || 'high-performance'
+    readStorage(GPU_PREFERENCE_KEY) ?? 'high-performance'
   );
   private readonly _supportsF16 = signal<boolean>(
-    localStorage.getItem(F16_SUPPORT_KEY) !== 'false'
+    readStorage(F16_SUPPORT_KEY) !== 'false'
   );
 
   readonly availableGPUs = this._availableGPUs.asReadonly();
@@ -165,7 +166,7 @@ export class WebLLMService extends ChatBackendInterface {
     const selectedGpu = gpus.find(g => g.id === this._selectedGPU()) || gpus[0];
     if (selectedGpu) {
       this._supportsF16.set(selectedGpu.supportsF16 ?? true);
-      localStorage.setItem(F16_SUPPORT_KEY, String(selectedGpu.supportsF16 ?? true));
+      writeStorage(F16_SUPPORT_KEY, String(selectedGpu.supportsF16 ?? true));
     }
 
     return gpus;
@@ -173,13 +174,13 @@ export class WebLLMService extends ChatBackendInterface {
 
   selectGPU(gpuId: string): void {
     this._selectedGPU.set(gpuId);
-    localStorage.setItem(GPU_PREFERENCE_KEY, gpuId);
+    writeStorage(GPU_PREFERENCE_KEY, gpuId);
 
     // Actualizar soporte F16 basado en GPU seleccionada
     const selectedGpu = this._availableGPUs().find(g => g.id === gpuId);
     if (selectedGpu) {
       this._supportsF16.set(selectedGpu.supportsF16 ?? true);
-      localStorage.setItem(F16_SUPPORT_KEY, String(selectedGpu.supportsF16 ?? true));
+      writeStorage(F16_SUPPORT_KEY, String(selectedGpu.supportsF16 ?? true));
     }
   }
 

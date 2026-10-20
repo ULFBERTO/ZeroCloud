@@ -1,0 +1,496 @@
+<div class="min-h-screen">
+  <div class="border-b border-line bg-surface">
+    <div class="mx-auto flex h-10 max-w-[1500px] items-center justify-between px-5 md:px-8">
+      <div class="flex items-center gap-4 font-mono text-[9px] uppercase tracking-[0.16em] text-muted">
+        <span class="text-ink">ZEROCLOUD / OVERVIEW</span>
+        <span class="hidden text-faint sm:inline">LOCAL INFERENCE SYSTEM</span>
+      </div>
+      <div class="flex items-center gap-4 font-mono text-[9px] uppercase tracking-[0.16em] text-muted">
+        <span class="hidden sm:inline">BUILD 0.1.0</span>
+        <span class="inline-flex items-center gap-1.5">
+          <span
+            class="h-1.5 w-1.5 rounded-full"
+            [class]="webgpuState() === 'ready' ? 'bg-positive' : webgpuState() === 'unsupported' ? 'bg-negative' : 'bg-faint animate-pulse'"
+          ></span>
+          {{ runtimeLabel() }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <section class="grid-field relative overflow-hidden border-b border-line">
+    <div class="mx-auto grid max-w-[1500px] grid-cols-1 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)]">
+      <div class="relative border-line px-5 py-10 sm:px-8 md:py-14 xl:border-r">
+        <div class="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.18em] text-muted">
+          <span class="text-ink">+</span>
+          Zero Cloud / Local runtime
+          <span class="h-px w-10 bg-line-strong"></span>
+        </div>
+
+        <h1 class="editorial-title mt-7 max-w-[12ch] text-[clamp(3.25rem,8vw,7rem)] text-ink">
+          Tus modelos.<br />
+          Tu GPU.<br />
+          <span class="text-faint">Cero nube.</span>
+        </h1>
+
+        <p class="mt-7 max-w-md text-sm leading-relaxed text-muted">
+          Ejecuta LLMs, modelos state-space y clústeres P2P directamente en el navegador.
+          Sin API keys, sin servidores y sin telemetría.
+        </p>
+
+        <div class="mt-8 flex flex-wrap items-center gap-2">
+          <app-button
+            label="Abrir playground"
+            icon="arrow-right"
+            size="lg"
+            (clicked)="openPlayground()"
+          />
+          <app-button
+            label="Explorar modelos"
+            variant="outline"
+            size="lg"
+            (clicked)="openModels()"
+          />
+        </div>
+
+        <div class="mt-10 grid grid-cols-2 gap-x-6 gap-y-5 border-t border-line-strong pt-6 sm:grid-cols-4">
+          @for (metric of heroMetrics(); track metric.label) {
+            <div class="min-w-0">
+              <p class="label-mono">{{ metric.label }}</p>
+              <p class="mt-1.5 truncate text-[13px] font-medium text-ink">{{ metric.value }}</p>
+              <p class="mt-0.5 font-mono text-[9px] uppercase tracking-[0.1em] text-faint">
+                {{ metric.hint }}
+              </p>
+            </div>
+          }
+        </div>
+
+        <div class="pointer-events-none absolute right-5 top-5 hidden items-center gap-2 font-mono text-[9px] uppercase tracking-[0.18em] text-faint md:flex">
+          <span>+</span>
+          <span>001 / 004</span>
+          <span>+</span>
+        </div>
+      </div>
+
+      <div class="relative flex min-h-[460px] flex-col justify-between overflow-hidden p-5 sm:p-7">
+        <div class="dot-field pointer-events-none absolute inset-0 opacity-40"></div>
+
+        <div class="relative z-10 flex items-start justify-between">
+          <div>
+            <p class="label-mono">Fig. 001 / Runtime</p>
+            <p class="mt-1 font-mono text-[9px] uppercase tracking-[0.12em] text-faint">
+              {{ gpuName() }}
+            </p>
+          </div>
+          <span [class]="runtimeBadgeClass()">
+            <span class="h-1 w-1 rounded-full bg-current"></span>
+            {{ runtimeLabel() }}
+          </span>
+        </div>
+
+        <div class="relative z-10 my-8 flex flex-1 items-center justify-center">
+          <div class="relative h-64 w-64 sm:h-72 sm:w-72" style="animation: drift 10s ease-in-out infinite">
+            <div class="iridescent blob absolute inset-0 border border-ink/80"></div>
+            <div class="blob absolute inset-7 border border-ink/25 mix-blend-multiply"></div>
+            <div class="blob absolute inset-14 border border-white/40"></div>
+
+            <span class="absolute -left-7 top-10 font-mono text-[9px] uppercase tracking-[0.16em] text-ink">
+              Local
+            </span>
+            <span class="absolute -right-6 top-20 font-mono text-[9px] uppercase tracking-[0.16em] text-ink">
+              WebGPU
+            </span>
+            <span class="absolute -right-4 bottom-12 rotate-90 font-mono text-[9px] uppercase tracking-[0.16em] text-ink">
+              Private / 100%
+            </span>
+
+            <span class="absolute -left-3 top-1/2 h-2 w-2 border border-ink bg-paper"></span>
+            <span class="absolute -right-1 bottom-6 h-2 w-2 border border-ink bg-paper"></span>
+            <span class="absolute left-1/2 -top-3 h-2 w-2 border border-ink bg-paper"></span>
+          </div>
+        </div>
+
+        <div class="relative z-10 grid grid-cols-3 border-t border-line-strong">
+          <div class="py-3 pr-3">
+            <p class="label-mono">Modelos</p>
+            <p class="mt-1 font-mono text-[12px] text-ink">{{ models().length }}</p>
+          </div>
+          <div class="border-l border-line px-3 py-3">
+            <p class="label-mono">En caché</p>
+            <p class="mt-1 font-mono text-[12px] text-ink">{{ downloadedCount() }}</p>
+          </div>
+          <div class="border-l border-line pl-3 py-3">
+            <p class="label-mono">Almacenaje</p>
+            <p class="mt-1 font-mono text-[12px] text-ink">{{ storage()?.used ?? '—' }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="mx-auto grid max-w-[1500px] grid-cols-1 xl:grid-cols-[minmax(0,1fr)_400px]">
+    <div class="min-w-0">
+      <section class="border-b border-line">
+        <div class="flex flex-wrap items-end justify-between gap-4 border-b border-line px-5 py-6 sm:px-8">
+          <div>
+            <p class="label-mono">02 / Capacidades</p>
+            <h2 class="mt-2 text-2xl font-semibold tracking-[-0.035em] text-ink md:text-[30px]">
+              ZeroCloud en acción
+            </h2>
+          </div>
+          <a
+            routerLink="/docs"
+            class="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-accent hover:underline"
+          >
+            Leer arquitectura
+            <app-icon name="arrow-up-right" [size]="12" />
+          </a>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
+          @for (capability of capabilities; track capability.index) {
+            <button
+              type="button"
+              class="group flex min-h-[250px] flex-col justify-between border-b border-line p-5 text-left transition-colors hover:bg-surface sm:border-r md:p-6 xl:border-b-0"
+              (click)="openPath(capability.path)"
+            >
+              <div class="flex items-start justify-between">
+                <span class="font-mono text-[10px] tracking-[0.14em] text-faint">{{ capability.index }}</span>
+                <span class="flex h-9 w-9 items-center justify-center border border-line bg-raised text-muted transition-colors group-hover:border-ink group-hover:text-ink">
+                  <app-icon [name]="capability.icon" [size]="17" />
+                </span>
+              </div>
+
+              <div class="mt-7">
+                <p class="label-mono">{{ capability.label }}</p>
+                <h3 class="mt-2 text-lg font-semibold leading-snug tracking-[-0.02em] text-ink">
+                  {{ capability.title }}
+                </h3>
+                <p class="mt-2 text-[12px] leading-relaxed text-muted">
+                  {{ capability.description }}
+                </p>
+              </div>
+
+              <span class="mt-6 inline-flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.12em] text-muted transition-colors group-hover:text-ink">
+                {{ capability.cta }}
+                <app-icon name="arrow-right" [size]="12" />
+              </span>
+            </button>
+          }
+        </div>
+      </section>
+
+      <section class="border-b border-line">
+        <div class="flex flex-wrap items-end justify-between gap-4 px-5 py-6 sm:px-8">
+          <div>
+            <p class="label-mono">03 / Model registry</p>
+            <h2 class="mt-2 text-2xl font-semibold tracking-[-0.035em] text-ink md:text-[30px]">
+              Modelos destacados
+            </h2>
+          </div>
+          <a
+            routerLink="/models"
+            class="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-accent hover:underline"
+          >
+            Ver catálogo completo
+            <app-icon name="arrow-up-right" [size]="12" />
+          </a>
+        </div>
+
+        <div class="mx-5 mb-8 border border-line sm:mx-8">
+          <div class="hidden grid-cols-[minmax(0,1fr)_88px_110px_84px] items-center gap-4 border-b border-line bg-surface px-4 py-2.5 md:grid">
+            <span class="label-mono">Modelo</span>
+            <span class="label-mono text-right">Tamaño</span>
+            <span class="label-mono">Estado</span>
+            <span class="label-mono text-right">Acción</span>
+          </div>
+
+          @if (isChecking() && featuredModels().length === 0) {
+            @for (placeholder of [1, 2, 3, 4]; track placeholder) {
+              <div class="border-b border-line px-4 py-4 last:border-b-0">
+                <div class="h-3 w-1/3 animate-pulse bg-line"></div>
+                <div class="mt-2 h-2 w-1/2 animate-pulse bg-line/70"></div>
+              </div>
+            }
+          }
+
+          @for (model of featuredModels(); track model.id) {
+            <div class="grid grid-cols-1 items-center gap-3 border-b border-line px-4 py-4 last:border-b-0 md:grid-cols-[minmax(0,1fr)_88px_110px_84px] md:gap-4">
+              <div class="flex min-w-0 items-center gap-3">
+                <span class="flex h-8 w-8 shrink-0 items-center justify-center border border-line bg-surface text-muted">
+                  <app-icon [name]="model.isCustom ? 'database' : 'layers'" [size]="15" />
+                </span>
+                <div class="min-w-0">
+                  <p class="truncate text-[13px] font-medium text-ink">{{ model.name }}</p>
+                  <p class="mt-0.5 truncate font-mono text-[9px] uppercase tracking-[0.08em] text-faint">
+                    {{ model.vramRequired ? 'VRAM ' + model.vramRequired : 'Caché del navegador' }}
+                  </p>
+                </div>
+              </div>
+
+              <span class="font-mono text-[10px] text-muted md:text-right">{{ model.size }}</span>
+
+              <div class="flex flex-wrap items-center gap-1.5">
+                @if (selectedModelId() === model.id) {
+                  <app-badge label="Activo" variant="ink" />
+                } @else if (model.isDownloaded) {
+                  <app-badge label="En caché" variant="success" dot />
+                } @else if (isModelDisabled(model)) {
+                  <app-badge label="No soportado" variant="error" />
+                } @else {
+                  <app-badge label="Disponible" variant="neutral" dot />
+                }
+              </div>
+
+              <div class="md:text-right">
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1.5 border border-line px-3 py-1.5 font-mono text-[9px] uppercase tracking-[0.1em] text-ink transition-colors hover:border-ink disabled:cursor-not-allowed disabled:opacity-40"
+                  [disabled]="isModelDisabled(model)"
+                  (click)="useModel(model)"
+                >
+                  Usar
+                  <app-icon name="arrow-right" [size]="11" />
+                </button>
+              </div>
+            </div>
+          } @empty {
+            @if (!isChecking()) {
+              <div class="px-4 py-10 text-center">
+                <p class="text-sm text-muted">No hay modelos en el catálogo.</p>
+              </div>
+            }
+          }
+        </div>
+      </section>
+
+      <section class="border-b border-line px-5 py-8 sm:px-8">
+        <p class="label-mono">04 / Stack</p>
+        <div class="mt-4 grid grid-cols-1 border border-line sm:grid-cols-3">
+          <div class="border-b border-line p-4 sm:border-b-0 sm:border-r">
+            <div class="flex items-center justify-between">
+              <span class="text-[13px] font-medium text-ink">WebLLM / MLC</span>
+              <app-icon name="gpu" [size]="15" class="text-muted" />
+            </div>
+            <p class="mt-2 font-mono text-[9px] uppercase tracking-[0.1em] text-faint">
+              Modelos cuantizados · WebGPU
+            </p>
+          </div>
+          <div class="border-b border-line p-4 sm:border-b-0 sm:border-r">
+            <div class="flex items-center justify-between">
+              <span class="text-[13px] font-medium text-ink">ONNX Runtime</span>
+              <app-icon name="zap" [size]="15" class="text-muted" />
+            </div>
+            <p class="mt-2 font-mono text-[9px] uppercase tracking-[0.1em] text-faint">
+              OxideLLM SSM · O(n) lineal
+            </p>
+          </div>
+          <div class="p-4">
+            <div class="flex items-center justify-between">
+              <span class="text-[13px] font-medium text-ink">PeerJS / WebRTC</span>
+              <app-icon name="nodes" [size]="15" class="text-muted" />
+            </div>
+            <p class="mt-2 font-mono text-[9px] uppercase tracking-[0.1em] text-faint">
+              Clúster P2P · sin coordinador
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="border-line xl:border-l">
+      <div class="xl:sticky xl:top-0">
+        <section class="border-b border-line px-5 py-6 sm:px-8">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="label-mono">Quickstart</p>
+              <h2 class="mt-2 text-[26px] font-semibold tracking-[-0.04em] text-ink">Empieza aquí</h2>
+            </div>
+            <button
+              type="button"
+              class="inline-flex items-center gap-1 font-mono text-[9px] uppercase tracking-[0.12em] text-accent hover:underline"
+              (click)="openDocs()"
+            >
+              Guía
+              <app-icon name="arrow-up-right" [size]="11" />
+            </button>
+          </div>
+
+          <p class="mt-3 text-[12px] leading-relaxed text-muted">
+            Clona el proyecto, elige un modelo compatible y ejecuta todo desde el navegador.
+            No hace falta configurar backend ni credenciales.
+          </p>
+
+          <div class="relative mt-4 border border-line bg-[#eeeee8]">
+            <pre class="overflow-x-auto p-4 pr-24 font-mono text-[10px] leading-relaxed text-graphite"><code>{{ quickstart }}</code></pre>
+            <button
+              type="button"
+              class="absolute bottom-3 right-3 inline-flex items-center gap-1.5 bg-ink px-2.5 py-2 font-mono text-[9px] uppercase tracking-[0.1em] text-paper transition-colors hover:bg-graphite"
+              (click)="copyQuickstart()"
+            >
+              <app-icon [name]="copyState() === 'copied' ? 'check' : 'copy'" [size]="12" />
+              {{ copyState() === 'copied' ? 'Copiado' : 'Copiar' }}
+            </button>
+          </div>
+
+          <div class="mt-3 flex items-center justify-between border border-line bg-raised px-3 py-2.5">
+            <a
+              href="https://github.com/ULFBERTO/ZeroCloud/blob/main/README.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-2 font-mono text-[10px] text-accent hover:underline"
+            >
+              <app-icon name="file" [size]="13" />
+              README.md
+            </a>
+            <a
+              href="https://github.com/ULFBERTO/ZeroCloud"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-1 font-mono text-[9px] uppercase tracking-[0.1em] text-muted hover:text-ink"
+            >
+              Ver repo
+              <app-icon name="arrow-up-right" [size]="11" />
+            </a>
+          </div>
+        </section>
+
+        <section class="grid grid-cols-2 border-b border-line">
+          <button
+            type="button"
+            class="flex items-start gap-3 border-r border-line p-5 text-left transition-colors hover:bg-surface"
+            (click)="openModels()"
+          >
+            <app-icon name="layers" [size]="16" class="mt-0.5 text-muted" />
+            <span>
+              <span class="block text-[12px] font-medium text-ink">Catálogo</span>
+              <span class="mt-0.5 block font-mono text-[9px] uppercase tracking-[0.08em] text-faint">
+                {{ models().length }} modelos
+              </span>
+            </span>
+          </button>
+          <button
+            type="button"
+            class="flex items-start gap-3 p-5 text-left transition-colors hover:bg-surface"
+            (click)="openDocs()"
+          >
+            <app-icon name="book" [size]="16" class="mt-0.5 text-muted" />
+            <span>
+              <span class="block text-[12px] font-medium text-ink">Documentación</span>
+              <span class="mt-0.5 block font-mono text-[9px] uppercase tracking-[0.08em] text-faint">
+                Arquitectura
+              </span>
+            </span>
+          </button>
+        </section>
+
+        <section id="usage" class="border-b border-line px-5 py-6 sm:px-8">
+          <div class="flex items-start justify-between">
+            <div>
+              <p class="label-mono">Uso</p>
+              <h2 class="mt-2 text-[22px] font-semibold tracking-[-0.03em] text-ink">Actividad local</h2>
+            </div>
+            <a
+              routerLink="/usage"
+              class="inline-flex items-center gap-1 font-mono text-[9px] uppercase tracking-[0.12em] text-accent hover:underline"
+            >
+              Ver
+              <app-icon name="arrow-up-right" [size]="11" />
+            </a>
+          </div>
+
+          <div class="mt-4 grid grid-cols-2 border border-line">
+            <div class="border-r border-line p-3">
+              <p class="label-mono">En caché</p>
+              <p class="mt-1.5 text-2xl font-semibold tracking-[-0.04em] text-ink">{{ downloadedCount() }}</p>
+              <p class="mt-0.5 font-mono text-[8px] uppercase tracking-[0.1em] text-faint">modelos</p>
+            </div>
+            <div class="p-3">
+              <p class="label-mono">Chats</p>
+              <p class="mt-1.5 text-2xl font-semibold tracking-[-0.04em] text-ink">{{ totalSessions() }}</p>
+              <p class="mt-0.5 font-mono text-[8px] uppercase tracking-[0.1em] text-faint">
+                {{ totalMessages() }} mensajes
+              </p>
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <div class="flex items-center justify-between font-mono text-[9px] uppercase tracking-[0.1em]">
+              <span class="text-muted">Almacenamiento</span>
+              <span class="text-ink">{{ storage()?.percent ?? 0 }}%</span>
+            </div>
+            <div class="mt-2 h-1.5 w-full bg-line">
+              <div class="h-full bg-ink" [style.width.%]="storage()?.percent ?? 0"></div>
+            </div>
+            <p class="mt-2 font-mono text-[9px] text-faint">
+              {{ storage() ? storage()!.used + ' de ' + storage()!.quota : 'Sin datos de cuota' }}
+            </p>
+          </div>
+
+          @if (downloadedCount() === 0) {
+            <p class="mt-4 border border-dashed border-line px-3 py-2.5 text-[11px] leading-relaxed text-muted">
+              Aún no hay modelos descargados. Se guardan en caché la primera vez que los usas.
+            </p>
+          }
+        </section>
+
+        <section class="p-5 sm:p-8">
+          <div class="relative overflow-hidden bg-ink p-5 text-paper">
+            <div class="iridescent blob absolute -right-10 -top-12 h-32 w-32 border border-paper/20 opacity-80"></div>
+            <p class="relative font-mono text-[9px] uppercase tracking-[0.16em] text-paper/60">
+              Ready when you are
+            </p>
+            <p class="relative mt-3 text-xl font-semibold tracking-[-0.03em]">
+              {{ selectedModel()?.name ?? 'Elige un modelo' }}
+            </p>
+            <p class="relative mt-1.5 max-w-[28ch] text-[11px] leading-relaxed text-paper/60">
+              La inferencia ocurre en tu hardware. Nada sale del navegador.
+            </p>
+            <button
+              type="button"
+              class="relative mt-5 inline-flex items-center gap-2 bg-paper px-3.5 py-2.5 font-mono text-[9px] uppercase tracking-[0.12em] text-ink transition-colors hover:bg-white"
+              (click)="openPlayground()"
+            >
+              Abrir playground
+              <app-icon name="arrow-right" [size]="12" />
+            </button>
+          </div>
+
+          <p class="mt-4 text-center font-mono text-[8px] uppercase tracking-[0.18em] text-faint">
+            No API keys / No servers / No telemetry
+          </p>
+        </section>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="border-t border-line bg-surface">
+    <div class="mx-auto grid max-w-[1500px] grid-cols-2 lg:grid-cols-4">
+      <a routerLink="/docs" class="flex items-center gap-3 border-b border-r border-line px-5 py-4 text-[12px] text-graphite transition-colors hover:bg-paper">
+        <app-icon name="shield" [size]="15" class="text-muted" />
+        Privacidad de datos
+      </a>
+      <a routerLink="/docs" class="flex items-center gap-3 border-b border-line px-5 py-4 text-[12px] text-graphite transition-colors hover:bg-paper lg:border-r">
+        <app-icon name="check" [size]="15" class="text-muted" />
+        Modelo de confianza
+      </a>
+      <a routerLink="/playground" class="flex items-center gap-3 border-b border-r border-line px-5 py-4 text-[12px] text-graphite transition-colors hover:bg-paper lg:border-b-0">
+        <app-icon name="play" [size]="15" class="text-muted" />
+        Abrir playground
+      </a>
+      <a
+        href="https://github.com/ULFBERTO/ZeroCloud/issues"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="flex items-center gap-3 border-b border-line px-5 py-4 text-[12px] text-graphite transition-colors hover:bg-paper lg:border-b-0"
+      >
+        <app-icon name="message" [size]="15" class="text-muted" />
+        Reportar un issue
+      </a>
+    </div>
+    <div class="mx-auto flex max-w-[1500px] flex-col gap-2 border-t border-line px-5 py-4 font-mono text-[9px] uppercase tracking-[0.12em] text-faint sm:flex-row sm:items-center sm:justify-between md:px-8">
+      <span>© 2026 ZeroCloud · Local inference system</span>
+      <span>Built with Angular · WebGPU · PeerJS</span>
+    </div>
+  </footer>
+</div>

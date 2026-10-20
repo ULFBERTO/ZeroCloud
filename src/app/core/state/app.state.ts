@@ -1,50 +1,20 @@
-import { signal, computed, inject, Injectable, effect } from '@angular/core';
-import { ThemeMode } from '../interfaces/theme.interface';
-
-export interface AppState {
-  theme: ThemeMode;
-  sidebarOpen: boolean;
-}
-
-const STORAGE_KEY = 'zerocloud_theme';
+import { Injectable, signal } from '@angular/core';
 
 @Injectable({ providedIn: 'root' })
 export class AppStateService {
-  private readonly _theme = signal<ThemeMode>(this.loadTheme());
-  private readonly _sidebarOpen = signal<boolean>(false);
+  private readonly _mobileNavOpen = signal(false);
 
-  readonly theme = this._theme.asReadonly();
-  readonly sidebarOpen = this._sidebarOpen.asReadonly();
+  readonly mobileNavOpen = this._mobileNavOpen.asReadonly();
 
-  readonly isDark = computed(() => this._theme() === 'dark');
-
-  constructor() {
-    effect(() => {
-      const t = this._theme();
-      localStorage.setItem(STORAGE_KEY, t);
-      document.documentElement.classList.toggle('dark', t === 'dark');
-    });
+  openMobileNav(): void {
+    this._mobileNavOpen.set(true);
   }
 
-  private loadTheme(): ThemeMode {
-    if (typeof window === 'undefined') return 'dark';
-    const stored = localStorage.getItem(STORAGE_KEY) as ThemeMode | null;
-    return stored || 'dark';
+  closeMobileNav(): void {
+    this._mobileNavOpen.set(false);
   }
 
-  setTheme(theme: ThemeMode): void {
-    this._theme.set(theme);
-  }
-
-  toggleTheme(): void {
-    this._theme.update(t => (t === 'dark' ? 'light' : 'dark'));
-  }
-
-  setSidebarOpen(open: boolean): void {
-    this._sidebarOpen.set(open);
-  }
-
-  toggleSidebar(): void {
-    this._sidebarOpen.update(v => !v);
+  toggleMobileNav(): void {
+    this._mobileNavOpen.update((open) => !open);
   }
 }

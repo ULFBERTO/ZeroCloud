@@ -1,28 +1,47 @@
-import { Component, input, output, model } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, model } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-input',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule],
   template: `
     <div class="w-full">
       @if (label()) {
-        <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">
-          {{ label() }}
-        </label>
+        <label [for]="controlId" class="label-mono mb-2 block">{{ label() }}</label>
       }
-      <input
-        type="{{ type() }}"
-        [id]="id()"
-        [placeholder]="placeholder()"
-        [ngModel]="value()"
-        (ngModelChange)="valueChange.emit($event)"
-        [disabled]="disabled()"
-        [class]="inputClass()"
-      />
+
+      @if (type() === 'textarea') {
+        <textarea
+          [id]="controlId"
+          [rows]="rows()"
+          [placeholder]="placeholder()"
+          [ngModel]="value()"
+          (ngModelChange)="value.set($event)"
+          [disabled]="disabled()"
+          [attr.autocomplete]="autocomplete() || null"
+          [class]="controlClasses()"
+        ></textarea>
+      } @else {
+        <input
+          [id]="controlId"
+          [type]="type()"
+          [placeholder]="placeholder()"
+          [ngModel]="value()"
+          (ngModelChange)="value.set($event)"
+          [disabled]="disabled()"
+          [attr.autocomplete]="autocomplete() || null"
+          [attr.inputmode]="inputMode() || null"
+          [attr.min]="min() ?? null"
+          [attr.max]="max() ?? null"
+          [attr.maxlength]="maxlength() ?? null"
+          [class]="controlClasses()"
+        />
+      }
+
       @if (helperText()) {
-        <p class="mt-1 text-xs text-slate-500">{{ helperText() }}</p>
+        <p class="mt-2 font-mono text-[10px] leading-relaxed text-muted">{{ helperText() }}</p>
       }
     </div>
   `,
@@ -30,15 +49,28 @@ import { FormsModule } from '@angular/forms';
 export class InputComponent {
   readonly label = input<string>('');
   readonly placeholder = input<string>('');
-  readonly type = input<'text' | 'email' | 'password' | 'number' | 'textarea'>('text');
+  readonly type = input<'text' | 'email' | 'password' | 'number' | 'search' | 'textarea'>('text');
   readonly disabled = input<boolean>(false);
   readonly helperText = input<string>('');
+  readonly autocomplete = input<string>('');
+  readonly inputMode = input<string>('');
+  readonly rows = input<number>(3);
+  readonly min = input<number | null>(null);
+  readonly max = input<number | null>(null);
+  readonly maxlength = input<number | null>(null);
   readonly id = input<string>('');
   readonly value = model<string>('');
-  readonly valueChange = output<string>();
 
-  inputClass(): string {
-    const base = 'w-full px-4 py-3 rounded-xl border border-slate-600 bg-slate-800 text-slate-100 text-sm transition-colors focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:bg-slate-800/50 disabled:text-slate-500';
-    return this.type() === 'textarea' ? base + ' resize-none min-h-[100px]' : base;
+  private static nextId = 0;
+  private readonly fallbackId = `field-${InputComponent.nextId++}`;
+
+  get controlId(): string {
+    return this.id() || this.fallbackId;
   }
+
+  readonly controlClasses = computed(() => {
+    const base =
+      'command-input w-full disabled:cursor-not-allowed disabled:opacity-50';
+    return this.type() === 'textarea' ? `${base} resize-none leading-relaxed` : base;
+  });
 }

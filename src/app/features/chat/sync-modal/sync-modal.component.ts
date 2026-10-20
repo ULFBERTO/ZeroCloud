@@ -1,11 +1,13 @@
-import { Component, inject, signal, output, computed } from '@angular/core';
+import { Component, computed, inject, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { P2PSyncService, PeerDevice } from '../../../core/services/p2p-sync.service';
+import { copyText } from '../../../core/utils/clipboard';
+import { IconComponent } from '../../../shared/components';
 
 @Component({
   selector: 'app-sync-modal',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, IconComponent],
   templateUrl: './sync-modal.component.html',
 })
 export class SyncModalComponent {
@@ -29,8 +31,8 @@ export class SyncModalComponent {
   readonly editingName = signal(false);
   readonly newDeviceName = signal('');
   readonly showDisconnectConfirm = signal(false);
+  readonly copied = signal(false);
 
-  // Determinar si soy worker (conectado a una sala) o host
   readonly isWorker = computed(() => this.connectionMode() === 'connected');
   readonly isHost = computed(() => this.connectionMode() === 'hosting');
 
@@ -38,8 +40,8 @@ export class SyncModalComponent {
     this.isLoading.set(true);
     try {
       await this.p2pSync.createRoom();
-    } catch (e) {
-      console.error('Error creating room:', e);
+    } catch (error) {
+      console.error('Error creating room:', error);
     } finally {
       this.isLoading.set(false);
     }
@@ -53,20 +55,15 @@ export class SyncModalComponent {
     try {
       await this.p2pSync.joinRoom(code);
       this.joinCode.set('');
-    } catch (e) {
-      console.error('Error joining room:', e);
+    } catch (error) {
+      console.error('Error joining room:', error);
     } finally {
       this.isLoading.set(false);
     }
   }
 
-  tryClose(): void {
-    // Si está conectado como worker, mostrar confirmación
-    if (this.isWorker() && this.isConnected()) {
-      this.showDisconnectConfirm.set(true);
-    } else {
-      this.close.emit();
-    }
+  requestDisconnect(): void {
+    this.showDisconnectConfirm.set(true);
   }
 
   confirmDisconnect(): void {
@@ -81,12 +78,15 @@ export class SyncModalComponent {
 
   disconnect(): void {
     this.p2pSync.disconnect();
+    this.close.emit();
   }
 
-  copyCode(): void {
+  async copyCode(): Promise<void> {
     const code = this.roomCode();
-    if (code) {
-      navigator.clipboard.writeText(code);
+    if (!code) return;
+    if (await copyText(code)) {
+      this.copied.set(true);
+      window.setTimeout(() => this.copied.set(false), 1600);
     }
   }
 
@@ -104,12 +104,12 @@ export class SyncModalComponent {
     this.editingName.set(false);
   }
 
-  getStatusColor(status: PeerDevice['status']): string {
+  statusClass(status: PeerDevice['status']): string {
     const colors: Record<PeerDevice['status'], string> = {
-      connected: 'bg-green-500',
-      connecting: 'bg-yellow-500',
-      error: 'bg-red-500',
+      connected: 'bg-positive',
+      connecting: 'bg-warning',
+      error: 'bg-negative',
     };
-    return colors[status] || 'bg-gray-500';
+    return `h-1.5 w-1.5 shrink-0 rounded-full ${colors[status] ?? 'bg-faint'}`;
   }
 }

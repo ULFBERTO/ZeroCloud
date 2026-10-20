@@ -1,226 +1,271 @@
-import { Component, inject, signal, computed } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { DecimalPipe } from '@angular/common';
+import { Component, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { OnnxSSMService } from '../../core/services/onnx-ssm.service';
+import { BadgeComponent, IconComponent } from '../../shared/components';
 
 @Component({
   selector: 'app-ssm-chat',
   standalone: true,
-  imports: [FormsModule, DecimalPipe],
+  imports: [FormsModule, DecimalPipe, BadgeComponent, IconComponent],
   template: `
-    <div class="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      <!-- Header -->
-      <header class="bg-slate-900 border-b border-slate-800 p-4 shrink-0">
-        <div class="max-w-4xl mx-auto flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <button
-              (click)="goBack()"
-              class="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-xl transition-colors">
-              ← Volver
-            </button>
-            <div>
-              <h1 class="text-xl font-bold text-slate-100">🦀 OxideLLM_TK_SSM_V1</h1>
-              <p class="text-xs text-slate-500">State Space Model (Mamba-like)</p>
-            </div>
+    <div class="flex min-h-[calc(100dvh-3.5rem)] flex-col bg-paper lg:min-h-dvh">
+      <header class="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-line bg-surface px-3 sm:px-5">
+        <div class="flex min-w-0 items-center gap-2">
+          <button
+            type="button"
+            class="rounded-[2px] p-1.5 text-muted transition-colors hover:bg-ink/5 hover:text-ink"
+            aria-label="Volver al inicio"
+            (click)="goBack()"
+          >
+            <app-icon name="arrow-left" [size]="16" />
+          </button>
+          <span class="hidden h-4 w-px bg-line sm:block"></span>
+          <div class="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.14em]">
+            <span class="text-ink">Oxide SSM</span>
+            <span class="text-faint">/</span>
+            <span class="hidden text-muted sm:inline">ONNX Runtime</span>
           </div>
+        </div>
 
-          <div class="flex items-center gap-2">
-            @if (state().isReady && modelInfo()) {
-              <span class="px-3 py-1.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 text-xs font-medium">
-                ✓ Iter {{ modelInfo()!.iteration }}
-              </span>
-              <span class="px-3 py-1.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 text-xs font-medium">
-                ONNX
-              </span>
-            }
-            <a
-              href="https://huggingface.co/ULFBERTO/OxideLLM_TK_SSM_V1_ONNX"
-              target="_blank"
-              class="px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-medium hover:bg-amber-500/20 transition-colors">
-              🤗 HuggingFace
-            </a>
-          </div>
+        <div class="flex items-center gap-2">
+          @if (state().isReady && modelInfo()) {
+            <app-badge label="Listo" variant="success" [dot]="true" />
+            <span class="hidden sm:block">
+              <app-badge [label]="'iter ' + modelInfo()!.iteration" variant="neutral" />
+            </span>
+          }
+          <app-badge label="ONNX" variant="info" />
+          <a
+            href="https://huggingface.co/ULFBERTO/OxideLLM_TK_SSM_V1_ONNX"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex h-8 items-center gap-1.5 border border-line px-2.5 font-mono text-[9px] uppercase tracking-[0.1em] text-muted transition-colors hover:border-ink hover:text-ink"
+          >
+            <app-icon name="external" [size]="12" />
+            <span class="hidden sm:inline">HuggingFace</span>
+          </a>
         </div>
       </header>
 
-      <!-- Main Content -->
-      <main class="flex-1 max-w-4xl mx-auto w-full p-4 md:p-6 flex flex-col">
-        <!-- Loading State -->
+      <main class="mx-auto flex w-full max-w-4xl flex-1 flex-col px-5 py-8 sm:px-8">
         @if (state().isLoading) {
-          <div class="flex-1 flex items-center justify-center">
-            <div class="text-center">
-              <div class="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p class="text-lg text-slate-200 mb-2">Cargando modelo SSM...</p>
-              <div class="w-64 bg-slate-800 rounded-full h-1.5 mx-auto overflow-hidden">
-                <div class="bg-purple-500 h-full rounded-full transition-all" [style.width.%]="state().progress"></div>
+          <div class="flex flex-1 flex-col justify-center py-12">
+            <div class="flex items-end justify-between gap-6">
+              <div>
+                <p class="label-mono">Model / Loading</p>
+                <h1 class="mt-2 text-3xl font-semibold tracking-[-0.04em] text-ink">
+                  Cargando SSM
+                </h1>
               </div>
-              <p class="text-sm text-slate-500 mt-2">{{ state().progress | number:'1.0-0' }}%</p>
+              <span class="font-mono text-5xl leading-none tracking-[-0.06em] text-ink">
+                {{ state().progress | number: '1.0-0' }}%
+              </span>
             </div>
+
+            <div class="mt-6 h-2 w-full bg-line">
+              <div
+                class="h-full bg-ink transition-[width] duration-300"
+                [style.width.%]="state().progress"
+              ></div>
+            </div>
+            <p class="mt-3 text-[11px] leading-relaxed text-muted">
+              ONNX Runtime Web se descarga una vez y queda en la caché del navegador.
+            </p>
           </div>
         }
 
-        <!-- Error State -->
         @if (state().error) {
-          <div class="flex-1 flex items-center justify-center">
-            <div class="text-center max-w-md">
-              <div class="text-6xl mb-4">❌</div>
-              <h2 class="text-xl font-bold text-red-400 mb-2">Error al cargar</h2>
-              <p class="text-slate-500 mb-4">{{ state().error }}</p>
-              <p class="text-[10px] text-slate-500 mb-5">
-                El modelo ONNX aún no está disponible en HuggingFace. Ejecuta <code class="bg-slate-800 px-2 py-1 rounded text-indigo-400">python convert_to_onnx.py</code>
-                y sube los archivos.
-              </p>
+          <div class="flex flex-1 flex-col justify-center py-8">
+            <p class="label-mono">Runtime / Error</p>
+            <h1 class="editorial-title mt-3 text-[clamp(2.25rem,5vw,3.5rem)] text-negative">
+              El modelo no cargó.
+            </h1>
+            <p class="mt-3 max-w-xl text-[13px] leading-relaxed text-muted">{{ state().error }}</p>
+
+            <div class="mt-6 border border-line bg-surface p-4">
+              <p class="label-mono">Publicar el modelo</p>
+              <pre class="mt-2 overflow-x-auto border border-line bg-raised p-3 font-mono text-[10px] text-graphite"><code>python convert_to_onnx.py
+# sube los archivos a ULFBERTO/OxideLLM_TK_SSM_V1_ONNX</code></pre>
+            </div>
+
+            <div class="mt-6 flex flex-wrap gap-2">
               <button
+                type="button"
+                class="inline-flex h-9 items-center gap-2 bg-ink px-4 font-mono text-[9px] uppercase tracking-[0.12em] text-paper hover:bg-graphite"
                 (click)="loadModel()"
-                class="px-6 py-3 bg-purple-600 text-slate-100 font-medium rounded-xl hover:bg-purple-500 transition-all duration-200 shadow-lg shadow-purple-500/20">
+              >
+                <app-icon name="refresh" [size]="13" />
                 Reintentar
               </button>
+              <a
+                href="https://huggingface.co/ULFBERTO/OxideLLM_TK_SSM_V1_ONNX"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex h-9 items-center gap-2 border border-line bg-surface px-4 font-mono text-[9px] uppercase tracking-[0.12em] text-graphite hover:border-ink hover:text-ink"
+              >
+                Abrir HuggingFace
+                <app-icon name="arrow-up-right" [size]="12" />
+              </a>
             </div>
           </div>
         }
 
-        <!-- Not Loaded State -->
         @if (!state().isLoading && !state().isReady && !state().error) {
-          <div class="flex-1 flex items-center justify-center">
-            <div class="text-center max-w-lg">
-              <div class="text-6xl mb-4">🦀</div>
-              <h2 class="text-2xl font-bold text-slate-100 mb-2">OxideLLM_TK_SSM_V1</h2>
-              <p class="text-slate-500 mb-6">
-                Modelo de lenguaje experimental basado en State Space Models (SSM). Arquitectura Mamba-like con complejidad O(n) lineal.
-              </p>
+          <div class="flex flex-1 flex-col justify-center py-8">
+            <div class="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.16em] text-muted">
+              <span class="text-ink">+</span>
+              Lab / Oxide SSM
+            </div>
 
-              <!-- ONNX Notice -->
-              <div class="rounded-2xl p-4 mb-6 border border-amber-500/30 bg-amber-500/10 text-left text-sm">
-                <p class="text-amber-400 font-medium mb-1">⚠️ Versión ONNX</p>
-                <p class="text-slate-500">
-                  Esta es la versión ONNX convertida para navegador. No hay soporte nativo para PyTorch en web, por lo que se usa ONNX Runtime.
+            <h1 class="editorial-title mt-5 max-w-[15ch] text-[clamp(2.75rem,6vw,4.5rem)] text-ink">
+              State space, sin servidores.
+            </h1>
+            <p class="mt-4 max-w-xl text-sm leading-relaxed text-muted">
+              OxideLLM usa un modelo state-space selectivo con complejidad lineal O(n). ONNX
+              Runtime Web ejecuta el grafo directamente en tu navegador.
+            </p>
+
+            <div class="mt-8 grid grid-cols-3 border border-line bg-surface">
+              <div class="border-r border-line p-4">
+                <p class="label-mono">Arquitectura</p>
+                <p class="mt-2 text-[13px] font-medium text-ink">Mamba-like</p>
+              </div>
+              <div class="border-r border-line p-4">
+                <p class="label-mono">Parámetros</p>
+                <p class="mt-2 text-[13px] font-medium text-ink">~770K</p>
+              </div>
+              <div class="p-4">
+                <p class="label-mono">Complejidad</p>
+                <p class="mt-2 text-[13px] font-medium text-ink">O(n) lineal</p>
+              </div>
+            </div>
+
+            <div class="mt-4 border border-warning/25 bg-warning-soft p-4">
+              <div class="flex items-center gap-2">
+                <app-icon name="warning" [size]="14" class="text-warning" />
+                <p class="font-mono text-[9px] uppercase tracking-[0.12em] text-warning">
+                  Versión experimental
                 </p>
               </div>
+              <p class="mt-2 text-[11px] leading-relaxed text-warning/80">
+                No hay soporte nativo de PyTorch en el navegador. Esta variante usa la conversión
+                ONNX publicada en HuggingFace.
+              </p>
+            </div>
 
-              <!-- SSM vs Transformer -->
-              <div class="rounded-2xl p-5 mb-6 border border-slate-800 bg-slate-900/50 text-left">
-                <h3 class="font-semibold text-slate-200 mb-3 text-center">⚡ SSM vs Transformer</h3>
-                <div class="grid grid-cols-2 gap-4 text-xs">
-                  <div>
-                    <p class="text-slate-500 mb-1">Transformer</p>
-                    <p class="text-slate-400">Complejidad O(n²)</p>
-                  </div>
-                  <div>
-                    <p class="text-purple-400 mb-1 font-medium">SSM ✓</p>
-                    <p class="text-slate-400">Complejidad O(n)</p>
-                  </div>
-                </div>
-              </div>
-
+            <div class="mt-8 flex flex-wrap items-center gap-3">
               <button
+                type="button"
+                class="inline-flex h-10 items-center gap-2 bg-ink px-5 font-mono text-[9px] uppercase tracking-[0.12em] text-paper transition-colors hover:bg-graphite"
                 (click)="loadModel()"
-                class="w-full px-8 py-3.5 bg-purple-600 text-slate-100 font-medium rounded-2xl hover:bg-purple-500 transition-all duration-200 shadow-lg shadow-purple-500/20">
-                🚀 Cargar Modelo
+              >
+                <app-icon name="play" [size]="13" />
+                Cargar modelo
               </button>
-              <p class="text-[10px] text-slate-500 mt-3">Se ejecuta en tu navegador con ONNX Runtime Web</p>
+              <span class="font-mono text-[8px] uppercase tracking-[0.1em] text-faint">
+                ONNX Runtime Web · caché local
+              </span>
             </div>
           </div>
         }
 
-        <!-- Chat Interface -->
         @if (state().isReady) {
-          <div class="flex-1 flex flex-col">
-            <!-- Model Info -->
-            @if (modelInfo()) {
-              <div class="mb-5 p-3.5 rounded-2xl bg-slate-900/50 border border-slate-800 flex items-center justify-between text-[10px]">
-                <div class="flex items-center gap-4">
-                  <span class="text-slate-500">Modelo:</span>
-                  <span class="text-slate-200">{{ modelInfo()!.name }}</span>
-                  <span class="text-slate-500">Params:</span>
-                  <span class="text-slate-200">{{ modelInfo()!.params }}</span>
-                  <span class="text-slate-500">Vocab:</span>
-                  <span class="text-slate-200">{{ modelInfo()!.vocabSize }}</span>
-                </div>
+          <div class="flex flex-1 flex-col">
+            @if (modelInfo(); as info) {
+              <div class="mb-4 flex flex-wrap items-center gap-x-5 gap-y-1 border border-line bg-surface px-4 py-3 font-mono text-[8px] uppercase tracking-[0.08em]">
+                <span class="text-faint">MODELO <span class="text-graphite">{{ info.name }}</span></span>
+                <span class="text-faint">PARAMS <span class="text-graphite">{{ info.params }}</span></span>
+                <span class="text-faint">VOCAB <span class="text-graphite">{{ info.vocabSize }}</span></span>
               </div>
             }
 
-            <!-- Generated Text Display -->
-            <div class="flex-1 bg-slate-900 rounded-3xl p-5 mb-5 overflow-y-auto border border-slate-800 min-h-[300px]">
+            <div class="min-h-[300px] flex-1 overflow-y-auto border border-line bg-raised p-5">
               @if (generatedText()) {
-                <pre class="whitespace-pre-wrap font-serif text-sm leading-relaxed text-slate-200">{{ generatedText() }}</pre>
+                <pre class="whitespace-pre-wrap font-sans text-[13px] leading-relaxed text-graphite">{{ generatedText() }}</pre>
               } @else {
-                <p class="text-slate-500 text-sm italic">Escribe un texto inicial y el modelo SSM continuará generando...</p>
+                <div class="flex h-full min-h-[260px] flex-col items-center justify-center text-center">
+                  <div class="relative flex h-14 w-14 items-center justify-center">
+                    <div class="iridescent blob absolute inset-0 border border-ink/50"></div>
+                    <span class="relative flex h-6 w-6 items-center justify-center bg-ink font-mono text-[9px] text-paper">O</span>
+                  </div>
+                  <p class="mt-4 text-[13px] font-medium text-ink">Escribe un inicio de texto</p>
+                  <p class="mt-1 max-w-xs text-[11px] leading-relaxed text-muted">
+                    El modelo continuará el texto token a token, de forma local.
+                  </p>
+                </div>
               }
             </div>
 
-            <!-- Controls -->
-            <div class="space-y-4">
-              <!-- Input -->
-              <div class="flex gap-3">
-                <textarea
-                  [ngModel]="prompt()"
-                  (ngModelChange)="prompt.set($event)"
-                  (keydown)="onKeyDown($event)"
-                  placeholder="Escribe el inicio del texto..."
-                  rows="3"
-                  class="flex-1 px-4 py-3.5 bg-slate-800 border border-slate-600 rounded-2xl resize-none focus:outline-none focus:border-purple-500 transition-colors text-sm"
-                  [disabled]="isGenerating()">
-                </textarea>
-              </div>
+            <div class="mt-4 border border-line bg-surface p-3">
+              <textarea
+                [ngModel]="prompt()"
+                (ngModelChange)="prompt.set($event)"
+                (keydown)="onKeyDown($event)"
+                placeholder="Escribe el inicio del texto…"
+                rows="3"
+                class="command-input w-full resize-none border-0 bg-transparent px-1 py-1 text-[13px] focus:outline-none"
+                [disabled]="isGenerating()"
+                aria-label="Texto inicial"
+              ></textarea>
 
-              <!-- Settings -->
-              <div class="flex items-center gap-5 text-xs">
-                <label class="flex items-center gap-2">
-                  <span class="text-slate-500">Longitud:</span>
-                  <input
-                    type="number"
-                    [ngModel]="maxLength()"
-                    (ngModelChange)="maxLength.set($event)"
-                    min="20"
-                    max="300"
-                    class="w-20 px-2 py-1.5 bg-slate-800 border border-slate-600 rounded text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
-                  />
-                </label>
-                <label class="flex items-center gap-2">
-                  <span class="text-slate-500">Temperatura:</span>
-                  <input
-                    type="range"
-                    [ngModel]="temperature()"
-                    (ngModelChange)="temperature.set($event)"
-                    min="0.1"
-                    max="1.5"
-                    step="0.1"
-                    class="w-24 accent-purple-500"
-                  />
-                  <span class="text-slate-300">{{ temperature() }}</span>
-                </label>
-              </div>
+              <div class="mt-2 flex flex-wrap items-end justify-between gap-3 border-t border-line pt-3">
+                <div class="flex flex-wrap items-center gap-4">
+                  <label class="flex items-center gap-2">
+                    <span class="font-mono text-[8px] uppercase tracking-[0.1em] text-faint">Longitud</span>
+                    <input
+                      type="number"
+                      [ngModel]="maxLength()"
+                      (ngModelChange)="maxLength.set($event)"
+                      min="20"
+                      max="300"
+                      class="command-input h-8 w-20 px-2 font-mono text-[11px]"
+                    />
+                  </label>
+                  <label class="flex items-center gap-2">
+                    <span class="font-mono text-[8px] uppercase tracking-[0.1em] text-faint">Temp</span>
+                    <input
+                      type="range"
+                      [ngModel]="temperature()"
+                      (ngModelChange)="temperature.set($event)"
+                      min="0.1"
+                      max="1.5"
+                      step="0.1"
+                      class="w-24 accent-ink"
+                    />
+                    <span class="font-mono text-[10px] text-graphite">{{ temperature() }}</span>
+                  </label>
+                </div>
 
-              <!-- Buttons -->
-              <div class="flex gap-3">
-                <button
-                  (click)="generate()"
-                  [disabled]="!canGenerate()"
-                  class="flex-1 px-6 py-3.5 bg-purple-600 text-slate-100 font-medium rounded-2xl hover:bg-purple-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed transition-all duration-200 shadow-lg shadow-purple-500/20">
-                  @if (isGenerating()) {
-                    <span class="flex items-center justify-center gap-2">
-                      <span class="animate-spin">⏳</span> Generando...
-                    </span>
-                  } @else {
-                    🦀 Generar con SSM
-                  }
-                </button>
-                <button
-                  (click)="clear()"
-                  class="px-4 py-3.5 bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-700 rounded-2xl transition-colors">
-                  🗑️ Limpiar
-                </button>
+                <div class="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    class="inline-flex h-8 items-center gap-1.5 px-2.5 font-mono text-[9px] uppercase tracking-[0.1em] text-muted transition-colors hover:bg-ink/5 hover:text-ink"
+                    (click)="clear()"
+                  >
+                    <app-icon name="trash" [size]="12" />
+                    Limpiar
+                  </button>
+                  <button
+                    type="button"
+                    class="inline-flex h-8 items-center gap-1.5 bg-ink px-3 font-mono text-[9px] uppercase tracking-[0.1em] text-paper transition-colors hover:bg-graphite disabled:cursor-not-allowed disabled:opacity-30"
+                    [disabled]="!canGenerate()"
+                    (click)="generate()"
+                  >
+                    <app-icon name="sparkles" [size]="12" />
+                    {{ isGenerating() ? 'Generando…' : 'Generar' }}
+                  </button>
+                </div>
               </div>
             </div>
+
+            <p class="mt-2 text-center font-mono text-[8px] uppercase tracking-[0.1em] text-faint">
+              Ctrl + Enter para generar · O(n) lineal · 100% local
+            </p>
           </div>
         }
       </main>
-
-      <!-- Footer Info -->
-      <footer class="bg-slate-900 border-t border-slate-800 p-3 text-center text-[10px] text-slate-500 shrink-0">
-        🦀 SSM Transformer Killer • Versión ONNX • Complejidad O(n) lineal • 100% en tu navegador
-      </footer>
     </div>
   `,
 })
@@ -237,10 +282,10 @@ export class SSMChatComponent {
   readonly isGenerating = signal(false);
 
   readonly canGenerate = computed(
-    () => this.state().isReady && !this.isGenerating() && this.prompt().trim().length > 0
+    () => this.state().isReady && !this.isGenerating() && this.prompt().trim().length > 0,
   );
 
-  modelInfo() {
+  modelInfo(): { name: string; iteration: number; vocabSize: number; params: string } | null {
     return this.ssmService.getModelInfo();
   }
 
@@ -253,11 +298,7 @@ export class SSMChatComponent {
 
     this.isGenerating.set(true);
     try {
-      await this.ssmService.generate(
-        this.prompt(),
-        this.maxLength(),
-        this.temperature()
-      );
+      await this.ssmService.generate(this.prompt(), this.maxLength(), this.temperature());
     } catch (error) {
       console.error('Error generating:', error);
     } finally {
@@ -272,7 +313,7 @@ export class SSMChatComponent {
   onKeyDown(event: KeyboardEvent): void {
     if (event.key === 'Enter' && event.ctrlKey) {
       event.preventDefault();
-      this.generate();
+      void this.generate();
     }
   }
 

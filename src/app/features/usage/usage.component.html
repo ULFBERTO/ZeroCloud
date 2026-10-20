@@ -1,0 +1,211 @@
+﻿<div class="mx-auto max-w-5xl px-5 py-10 sm:px-8 sm:py-14 lg:px-10">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.16em] text-muted">
+        <a routerLink="/" class="hover:text-ink">Inicio</a>
+        <span class="text-faint">/</span>
+        <span class="text-ink">Uso</span>
+      </div>
+      <h1 class="editorial-title mt-4 text-[clamp(2.75rem,6vw,4.5rem)] text-ink">Uso local.</h1>
+      <p class="mt-3 max-w-lg text-sm leading-relaxed text-muted">
+        Todo lo que ZeroCloud guarda vive en este navegador. Aquí puedes revisar el espacio
+        ocupado, los modelos descargados y la actividad de tus conversaciones.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      class="inline-flex h-9 items-center gap-2 border border-line bg-raised px-3 font-mono text-[9px] uppercase tracking-[0.12em] text-graphite transition-colors hover:border-ink hover:text-ink disabled:opacity-50"
+      [disabled]="isRefreshing()"
+      (click)="refreshStorage()"
+    >
+      <app-icon name="refresh" [size]="13" />
+      {{ isRefreshing() ? 'Actualizando' : 'Actualizar' }}
+    </button>
+  </div>
+
+  <div class="mt-10 grid grid-cols-2 border-l border-t border-line lg:grid-cols-4">
+    <div class="border-b border-r border-line bg-surface p-4 sm:p-5">
+      <p class="label-mono">Modelos</p>
+      <p class="mt-3 font-mono text-3xl tracking-[-0.06em] text-ink">{{ downloadedModels().length }}</p>
+      <p class="mt-1 font-mono text-[8px] uppercase tracking-[0.1em] text-faint">listos sin conexión</p>
+    </div>
+    <div class="border-b border-r border-line bg-surface p-4 sm:p-5">
+      <p class="label-mono">Chats</p>
+      <p class="mt-3 font-mono text-3xl tracking-[-0.06em] text-ink">{{ sessions().length }}</p>
+      <p class="mt-1 font-mono text-[8px] uppercase tracking-[0.1em] text-faint">en el historial</p>
+    </div>
+    <div class="border-b border-r border-line bg-surface p-4 sm:p-5">
+      <p class="label-mono">Mensajes</p>
+      <p class="mt-3 font-mono text-3xl tracking-[-0.06em] text-ink">{{ totalMessages() }}</p>
+      <p class="mt-1 font-mono text-[8px] uppercase tracking-[0.1em] text-faint">generados localmente</p>
+    </div>
+    <div class="border-b border-r border-line bg-surface p-4 sm:p-5">
+      <p class="label-mono">Personalizados</p>
+      <p class="mt-3 font-mono text-3xl tracking-[-0.06em] text-ink">{{ customModelCount() }}</p>
+      <p class="mt-1 font-mono text-[8px] uppercase tracking-[0.1em] text-faint">modelos añadidos</p>
+    </div>
+  </div>
+
+  <section class="mt-8 border border-line bg-surface">
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
+      <div>
+        <p class="label-mono">Storage / IndexedDB</p>
+        <h2 class="mt-1 text-lg font-semibold tracking-[-0.02em] text-ink">Espacio del navegador</h2>
+      </div>
+      <span class="font-mono text-[10px] text-muted">{{ storageLabel() }}</span>
+    </div>
+
+    <div class="p-5">
+      <div class="h-2 w-full bg-line">
+        <div
+          class="h-full bg-ink transition-[width] duration-500"
+          [style.width.%]="storage()?.percent ?? 0"
+        ></div>
+      </div>
+      <div class="mt-2.5 flex items-center justify-between font-mono text-[9px] uppercase tracking-[0.1em] text-faint">
+        <span>{{ storage()?.percent ?? 0 }}% utilizado</span>
+        <span>Cuota del navegador</span>
+      </div>
+
+      <p class="mt-4 max-w-xl text-[11px] leading-relaxed text-muted">
+        Los pesos de los modelos son la mayor parte del consumo. Elimina modelos que no uses desde
+        el registro para liberar espacio al instante.
+      </p>
+
+      <a
+        routerLink="/models"
+        class="mt-4 inline-flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.12em] text-ink hover:underline"
+      >
+        Gestionar modelos
+        <app-icon name="arrow-right" [size]="12" />
+      </a>
+    </div>
+  </section>
+
+  <div class="mt-8 grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
+    <section>
+      <div class="flex items-end justify-between gap-4">
+        <div>
+          <p class="label-mono">Runtime</p>
+          <h2 class="mt-1.5 text-xl font-semibold tracking-[-0.03em] text-ink">Modelos descargados</h2>
+        </div>
+        <span class="font-mono text-[9px] uppercase tracking-[0.1em] text-faint">
+          {{ downloadedModels().length }} activos
+        </span>
+      </div>
+
+      <div class="mt-4 border border-line bg-surface">
+        @for (model of downloadedModels(); track model.id) {
+          <div class="flex items-center justify-between gap-4 border-b border-line px-4 py-3.5 last:border-b-0">
+            <div class="min-w-0">
+              <p class="truncate text-[12px] font-medium text-ink">{{ model.name }}</p>
+              <p class="mt-0.5 font-mono text-[8px] uppercase tracking-[0.1em] text-faint">
+                {{ model.size }} · {{ model.isCustom ? 'personalizado' : 'catálogo' }}
+              </p>
+            </div>
+            <app-badge
+              [label]="selectedModel()?.id === model.id ? 'activo' : 'listo'"
+              [variant]="selectedModel()?.id === model.id ? 'success' : 'neutral'"
+            />
+          </div>
+        } @empty {
+          <div class="px-5 py-10 text-center">
+            <span class="mx-auto flex h-10 w-10 items-center justify-center border border-line bg-raised text-faint">
+              <app-icon name="database" [size]="17" />
+            </span>
+            <p class="mt-3 text-[12px] font-medium text-ink">Todavía no hay modelos en caché</p>
+            <p class="mx-auto mt-1 max-w-xs text-[11px] leading-relaxed text-muted">
+              Elige un modelo del catálogo y se descargará la primera vez que lo inicies.
+            </p>
+            <a
+              routerLink="/models"
+              class="mt-4 inline-flex h-8 items-center gap-1.5 bg-ink px-3 font-mono text-[9px] uppercase tracking-[0.1em] text-paper hover:bg-graphite"
+            >
+              Explorar modelos
+              <app-icon name="arrow-right" [size]="11" />
+            </a>
+          </div>
+        }
+      </div>
+
+      <div class="mt-8">
+        <p class="label-mono">Conversaciones recientes</p>
+        <div class="mt-3 border border-line bg-surface">
+          @for (session of recentSessions(); track session.id) {
+            <a
+              [routerLink]="['/playground']"
+              class="flex items-center justify-between gap-4 border-b border-line px-4 py-3 last:border-b-0 hover:bg-raised"
+            >
+              <span class="min-w-0">
+                <span class="block truncate text-[12px] font-medium text-ink">{{ session.title }}</span>
+                <span class="mt-0.5 block font-mono text-[8px] uppercase tracking-[0.1em] text-faint">
+                  {{ session.messages.length }} mensajes · {{ formatDate(session.updatedAt) }}
+                </span>
+              </span>
+              <app-icon name="chevron-right" [size]="13" class="shrink-0 text-faint" />
+            </a>
+          } @empty {
+            <p class="px-4 py-6 text-[11px] text-muted">Aún no hay conversaciones guardadas.</p>
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="space-y-6">
+      <div>
+        <p class="label-mono">Hardware</p>
+        <h2 class="mt-1.5 text-xl font-semibold tracking-[-0.03em] text-ink">GPU disponible</h2>
+
+        <div class="mt-4 border border-line bg-surface">
+          @for (gpu of availableGPUs(); track gpu.id) {
+            <div class="border-b border-line px-4 py-3.5 last:border-b-0">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="truncate text-[12px] font-medium text-ink">{{ gpu.name }}</p>
+                  <p class="mt-0.5 font-mono text-[8px] uppercase tracking-[0.1em] text-faint">
+                    {{ gpu.powerPreference }} · {{ gpu.vendor || 'vendor desconocido' }}
+                  </p>
+                </div>
+                <app-badge
+                  [label]="gpu.supportsF16 ? 'F16' : 'F32'"
+                  [variant]="gpu.supportsF16 ? 'success' : 'warning'"
+                />
+              </div>
+            </div>
+          } @empty {
+            <p class="px-4 py-6 text-[11px] leading-relaxed text-muted">
+              No se detectó WebGPU. Usa Chrome o Edge actualizado para habilitar la inferencia
+              local.
+            </p>
+          }
+        </div>
+
+        <div class="mt-3 flex items-center justify-between border border-line bg-raised px-4 py-3">
+          <span class="font-mono text-[9px] uppercase tracking-[0.1em] text-muted">Float16</span>
+          <span class="font-mono text-[9px] uppercase tracking-[0.1em] text-ink">
+            {{ supportsF16() ? 'Soportado' : 'No soportado' }}
+          </span>
+        </div>
+      </div>
+
+      <div class="border border-line bg-surface p-5">
+        <div class="flex items-center gap-2">
+          <app-icon name="shield" [size]="15" class="text-ink" />
+          <p class="label-mono">Privacidad</p>
+        </div>
+        <p class="mt-3 text-[12px] leading-relaxed text-muted">
+          ZeroCloud no envía prompts, respuestas ni pesos de modelos a servidores externos. El
+          historial y la caché permanecen en IndexedDB.
+        </p>
+        <a
+          routerLink="/docs"
+          class="mt-3 inline-flex items-center gap-1 font-mono text-[9px] uppercase tracking-[0.12em] text-ink hover:underline"
+        >
+          Leer la documentación
+          <app-icon name="arrow-up-right" [size]="11" />
+        </a>
+      </div>
+    </section>
+  </div>
+</div>

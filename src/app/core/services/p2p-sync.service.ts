@@ -1,5 +1,6 @@
 import { Injectable, signal, computed } from '@angular/core';
 import Peer, { DataConnection } from 'peerjs';
+import { readStorage, writeStorage } from '../utils/storage';
 
 export interface PeerDevice {
   id: string;
@@ -69,17 +70,17 @@ export class P2PSyncService {
   }
 
   private getDeviceName(): string {
-    let name = localStorage.getItem(DEVICE_NAME_KEY);
+    let name = readStorage(DEVICE_NAME_KEY);
     if (!name) {
       name = `User-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-      localStorage.setItem(DEVICE_NAME_KEY, name);
+      writeStorage(DEVICE_NAME_KEY, name);
     }
     return name;
   }
 
   setDeviceName(name: string): void {
     this.deviceName = name;
-    localStorage.setItem(DEVICE_NAME_KEY, name);
+    writeStorage(DEVICE_NAME_KEY, name);
   }
 
   getDeviceInfo(): { id: string | null; name: string } {
